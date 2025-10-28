@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Add Certificate Functionality</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .test-section {
+            padding: 30px;
+        }
+
+        .test-form {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .required::after {
+            content: " *";
+            color: #e74c3c;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .results {
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .cert-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .log-section {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .log-time {
+            color: #858585;
+        }
+
+        .log-success {
+            color: #4ec9b0;
+        }
+
+        .log-error {
+            color: #f48771;
+        }
+
+        .log-info {
+            color: #4fc1ff;
+        }
+
+        .test-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Certificate Addition Test Suite</h1>
+            <p>Test the functionality of adding new certificates to the dashboard</p>
+        </div>
+
+        <div class="test-section">
+            <!-- Test Statistics -->
+            <div class="test-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTests">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="passedTests">0</div>
+                    <div class="stat-label">Passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="failedTests">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+            </div>
+
+            <!-- Test Form -->
+            <div class="test-form">
+                <h2 style="margin-bottom: 20px;">📝 Add New Test Certificate</h2>
+                <form id="addCertificateForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="required">Certificate Name</label>
+                            <input type="text" id="certName" required placeholder="e.g., api.example.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">Environment</label>
+                            <select id="certEnvironment" required>
+                                <option value="">Select Environment</option>
+                                <option value="Production">Production</option>
+                                <option value="PRD">PRD</option>
+                                <option value="Staging">Staging</option>
+                                <option value="TST">TST</option>
+                                <option value="Development">Development</option>
+                                <option value="DEV">DEV</option>
+                                <option value="Test">Test</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="required">Application</label>
+                            <input type="text" id="certApplication" required placeholder="e.g., API Gateway">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">Expiry Date</label>
+                            <input type="date" id="certExpiryDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Certificate Type</label>
+                            <select id="certType">
+                                <option value="">Select Type</option>
+                                <option value="SSL/TLS">SSL/TLS</option>
+                                <option value="Code Signing">Code Signing</option>
+                                <option value="Client Authentication">Client Authentication</option>
+                                <option value="Server Authentication">Server Authentication</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="required">Owner Email</label>
+                            <input type="email" id="certOwnerEmail" required placeholder="owner@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Support Email</label>
+                            <input type="email" id="certSupportEmail" placeholder="support@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Account Number</label>
+                            <input type="text" id="certAccountNumber" placeholder="ACC123456">
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">
+                            ➕ Add Certificate
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="fillSampleData()">
+                            📋 Fill Sample Data
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="runAllTests()">
+                            ▶️ Run All Tests
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results" id="resultsSection" style="display: none;">
+                <h2 style="margin-bottom: 20px;">📊 Test Results</h2>
+                <div id="resultsContainer"></div>
+            </div>
+
+            <!-- Log Section -->
+            <div style="margin-top: 30px;">
+                <h2 style="margin-bottom: 15px;">📋 Test Log</h2>
+                <div class="log-section" id="logSection"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+        let testResults = [];
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+
+        // Helper functions
+        function log(message, type = 'info') {
+            const logSection = document.getElementById('logSection');
+            const time = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'log-error' : type === 'success' ? 'log-success' : 'log-info';
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="${colorClass}">${message}</span>`;
+            logSection.appendChild(entry);
+            logSection.scrollTop = logSection.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('totalTests').textContent = totalTests;
+            document.getElementById('passedTests').textContent = passedTests;
+            document.getElementById('failedTests').textContent = failedTests;
+        }
+
+        function generateUUID() {
+            return 'cert-' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function calculateDaysLeft(expiryDate) {
+            const expiry = new Date(expiryDate);
+            const today = new Date();
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        }
+
+        function calculateStatus(expiryDate) {
+            const daysLeft = calculateDaysLeft(expiryDate);
+            if (daysLeft < 0) return 'Expired';
+            if (daysLeft <= 30) return 'Due for Renewal';
+            return 'Active';
+        }
+
+        function fillSampleData() {
+            // Set expiry date to 60 days from now
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 60);
+            const expiryDate = futureDate.toISOString().split('T')[0];
+
+            document.getElementById('certName').value = 'test-api.example.com';
+            document.getElementById('certEnvironment').value = 'Test';
+            document.getElementById('certApplication').value = 'API Gateway';
+            document.getElementById('certExpiryDate').value = expiryDate;
+            document.getElementById('certType').value = 'SSL/TLS';
+            document.getElementById('certOwnerEmail').value = 'test.user@example.com';
+            document.getElementById('certSupportEmail').value = 'support@example.com';
+            document.getElementById('certAccountNumber').value = 'ACC-TEST-001';
+
+            log('Sample data filled into form', 'success');
+        }
+
+        // Form submission handler
+        document.getElementById('addCertificateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await testAddCertificate();
+        });
+
+        async function testAddCertificate() {
+            log('Starting certificate addition test...', 'info');
+            totalTests++;
+            updateStats();
+
+            const certData = {
+                CertificateName: document.getElementById('certName').value,
+                Environment: document.getElementById('certEnvironment').value,
+                Application: document.getElementById('certApplication').value,
+                ExpiryDate: document.getElementById('certExpiryDate').value,
+                Type: document.getElementById('certType').value || 'SSL/TLS',
+                OwnerEmail: document.getElementById('certOwnerEmail').value,
+                SupportEmail: document.getElementById('certSupportEmail').value || '',
+                AccountNumber: document.getElementById('certAccountNumber').value || ''
+            };
+
+            // Calculate status and days left
+            const daysLeft = calculateDaysLeft(certData.ExpiryDate);
+            const status = calculateStatus(certData.ExpiryDate);
+
+            const newCert = {
+                ...certData,
+                CertificateID: generateUUID(),
+                Status: status,
+                DaysUntilExpiry: daysLeft,
+                LastUpdatedOn: new Date().toISOString(),
+                CreatedOn: new Date().toISOString(),
+                Version: 1,
+                ImportedFrom: 'Manual - Test Suite'
+            };
+
+            log(`Generated Certificate ID: ${newCert.CertificateID}`, 'info');
+            log(`Calculated Status: ${status} (${daysLeft} days until expiry)`, 'info');
+
+            // Test 1: Validate required fields
+            const test1 = {
+                name: 'Validate Required Fields',
+                passed: certData.CertificateName && certData.Environment && certData.Application && 
+                        certData.ExpiryDate && certData.OwnerEmail,
+                details: 'All required fields are present'
+            };
+            logTestResult(test1);
+
+            // Test 2: Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const test2 = {
+                name: 'Validate Email Format',
+                passed: emailRegex.test(certData.OwnerEmail),
+                details: `Owner Email: ${certData.OwnerEmail}`
+            };
+            logTestResult(test2);
+
+            // Test 3: Validate expiry date
+            const test3 = {
+                name: 'Validate Expiry Date',
+                passed: certData.ExpiryDate && certData.ExpiryDate.length > 0,
+                details: `Expiry date: ${certData.ExpiryDate} (${daysLeft} days away)`
+            };
+            logTestResult(test3);
+
+            // Test 4: Status calculation
+            const test4 = {
+                name: 'Status Calculation',
+                passed: status !== null && status !== undefined,
+                details: `Status: ${status}`
+            };
+            logTestResult(test4);
+
+            // Test 5: UUID generation
+            const test5 = {
+                name: 'Certificate ID Generation',
+                passed: newCert.CertificateID && newCert.CertificateID.startsWith('cert-'),
+                details: `ID: ${newCert.CertificateID}`
+            };
+            logTestResult(test5);
+
+            // Test 6: POST to API
+            log('📡 Sending certificate to API...', 'info');
+            const test6 = await postCertificateToAPI(newCert);
+            logTestResult(test6);
+
+            // Display result
+            displayResult(newCert, [test1, test2, test3, test4, test5, test6]);
+        }
+
+        async function postCertificateToAPI(certificate) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(certificate)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    return {
+                        name: 'API POST Request',
+                        passed: true,
+                        details: `Certificate successfully added to DynamoDB! ID: ${certificate.CertificateID}`
+                    };
+                } else {
+                    return {
+                        name: 'API POST Request',
+                        passed: false,
+                        details: `API returned error: ${data.error || data.message || 'Unknown error'}`
+                    };
+                }
+            } catch (error) {
+                return {
+                    name: 'API POST Request',
+                    passed: false,
+                    details: `Network error: ${error.message}`
+                };
+            }
+        }
+
+        function logTestResult(test) {
+            if (test.passed) {
+                passedTests++;
+                log(`✅ ${test.name}: PASSED - ${test.details}`, 'success');
+            } else {
+                failedTests++;
+                log(`❌ ${test.name}: FAILED - ${test.details}`, 'error');
+            }
+            updateStats();
+        }
+
+        function displayResult(cert, tests) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsSection.style.display = 'block';
+
+            const allPassed = tests.every(t => t.passed);
+            const statusBadge = allPassed ? 
+                '<span class="status-badge status-success">✅ All Tests Passed</span>' :
+                '<span class="status-badge status-error">❌ Some Tests Failed</span>';
+
+            const resultCard = document.createElement('div');
+            resultCard.className = 'result-card';
+            resultCard.innerHTML = `
+                <h3>
+                    📜 Certificate: ${cert.CertificateName}
+                    ${statusBadge}
+                </h3>
+                <div class="cert-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Certificate ID</span>
+                        <span class="detail-value">${cert.CertificateID}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Environment</span>
+                        <span class="detail-value">${cert.Environment}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Application</span>
+                        <span class="detail-value">${cert.Application}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Expiry Date</span>
+                        <span class="detail-value">${cert.ExpiryDate}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value">${cert.Status}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Days Until Expiry</span>
+                        <span class="detail-value">${cert.DaysUntilExpiry}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Type</span>
+                        <span class="detail-value">${cert.Type || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Owner Email</span>
+                        <span class="detail-value">${cert.OwnerEmail}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Created On</span>
+                        <span class="detail-value">${new Date(cert.CreatedOn).toLocaleString()}</span>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px;">Test Results:</h4>
+                    ${tests.map(test => `
+                        <div style="padding: 8px; border-left: 4px solid ${test.passed ? '#28a745' : '#dc3545'}; margin-bottom: 8px; background: #f8f9fa;">
+                            <strong>${test.passed ? '✅' : '❌'} ${test.name}</strong>
+                            <div style="font-size: 13px; color: #666; margin-top: 5px;">${test.details}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            resultsContainer.insertBefore(resultCard, resultsContainer.firstChild);
+        }
+
+        async function runAllTests() {
+            log('========================================', 'info');
+            log('🚀 Running Automated Test Suite', 'success');
+            log('========================================', 'info');
+
+            // Test scenarios
+            const scenarios = [
+                {
+                    name: 'Valid Active Certificate',
+                    data: {
+                        CertificateName: 'prod-api.example.com',
+                        Environment: 'Production',
+                        Application: 'Main API',
+                        ExpiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        Type: 'SSL/TLS',
+                        OwnerEmail: 'prod@example.com'
+                    }
+                },
+                {
+                    name: 'Certificate Due for Renewal',
+                    data: {
+                        CertificateName: 'staging-api.example.com',
+                        Environment: 'Staging',
+                        Application: 'Staging API',
+                        ExpiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        Type: 'SSL/TLS',
+                        OwnerEmail: 'staging@example.com'
+                    }
+                },
+                {
+                    name: 'Test Environment Certificate',
+                    data: {
+                        CertificateName: 'test.internal.com',
+                        Environment: 'Test',
+                        Application: 'Test Suite',
+                        ExpiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        Type: 'Server Authentication',
+                        OwnerEmail: 'test.team@example.com',
+                        SupportEmail: 'support@example.com',
+                        AccountNumber: 'ACC-TEST-999'
+                    }
+                }
+            ];
+
+            for (const scenario of scenarios) {
+                log(`\n📝 Testing: ${scenario.name}`, 'info');
+                
+                // Fill form with scenario data
+                document.getElementById('certName').value = scenario.data.CertificateName;
+                document.getElementById('certEnvironment').value = scenario.data.Environment;
+                document.getElementById('certApplication').value = scenario.data.Application;
+                document.getElementById('certExpiryDate').value = scenario.data.ExpiryDate;
+                document.getElementById('certType').value = scenario.data.Type || '';
+                document.getElementById('certOwnerEmail').value = scenario.data.OwnerEmail;
+                document.getElementById('certSupportEmail').value = scenario.data.SupportEmail || '';
+                document.getElementById('certAccountNumber').value = scenario.data.AccountNumber || '';
+
+                await testAddCertificate();
+                
+                // Wait a bit between tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            log('\n========================================', 'success');
+            log('✅ All Automated Tests Complete!', 'success');
+            log(`📊 Results: ${passedTests}/${totalTests} tests passed`, 'success');
+            log('========================================', 'success');
+        }
+
+        // Initialize
+        log('🔧 Certificate Addition Test Suite Initialized', 'success');
+        log('📝 Fill the form and click "Add Certificate" to test', 'info');
+        log('🎯 Or click "Run All Tests" to execute automated test scenarios', 'info');
+    </script>
+</body>
+</html>

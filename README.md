@@ -21,9 +21,11 @@ A complete AWS-based certificate monitoring and management system with automated
 - ✅ **Automated Certificate Monitoring**: Daily Lambda scans for expiring certificates
 - ✅ **Email Notifications**: SES-based alerts for certificates expiring within 30 days  
 - ✅ **Web Dashboard**: Real-time certificate viewing with filtering and search
+- ✅ **Add/Update Certificates**: Web-based interface to add and update certificates directly ✨ NEW
 - ✅ **Bulk Import**: Python script for importing certificates from Excel files
 - ✅ **Complete Audit Trail**: All changes logged in DynamoDB
 - ✅ **Infrastructure as Code**: 100% Terraform-managed AWS infrastructure
+- ✅ **REST API**: Full CRUD operations via Lambda Function URL (GET, POST, PUT)
 
 ### System Status
 - **Environment**: Development (`dev`)
@@ -138,16 +140,28 @@ A complete AWS-based certificate monitoring and management system with automated
 - Runtime: Python 3.9 | Memory: 512 MB | Timeout: 60s
 - **Function URL**: `https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/`
 - **Auth**: NONE (public access)
+- **Supported Methods**: GET, POST, PUT ✨ NEW
 - **CORS** (Configured in Terraform + AWS CLI):
   ```hcl
   cors {
     allow_origins     = ["*"]
-    allow_methods     = ["GET", "POST", "OPTIONS"]
+    allow_methods     = ["GET", "POST", "PUT", "OPTIONS"]
     allow_headers     = ["date", "keep-alive", "content-type"]
     max_age          = 86400
   }
   ```
-- **Code Logic**: Scans DynamoDB, converts Decimal→float, returns JSON
+- **Endpoints**:
+  - **GET**: Fetch all certificates from DynamoDB
+  - **POST**: Add new certificate with validation ✨ NEW
+  - **PUT**: Update existing certificate ✨ NEW
+- **Code Logic**: 
+  - Scans DynamoDB
+  - Converts Decimal→float
+  - Auto-calculates certificate status (Active/Due for Renewal/Expired)
+  - Auto-calculates days until expiry
+  - Field validation (required fields, email format)
+  - Audit logging to certificate-logs table
+  - Returns JSON
 - **Critical Fix**: NO CORS headers in Lambda code (Function URL handles it)
 
 **Certificate Monitor** (`cert-management-dev-certificate-monitor`)
@@ -355,12 +369,53 @@ cert-dashboard/
 
 ### Key Code Logic
 
-**1. dashboard_api.py**
+**1. dashboard_api.py** ✨ UPDATED
 ```python
-# Scan DynamoDB certificates table
-# Convert Decimal → float (JSON compatibility)
-# Convert datetime → ISO 8601 string
-# Return JSON: {"certificates": [...], "count": 191}
+def lambda_handler(event, context):
+    """
+    Supports GET, POST, PUT methods
+    """
+    http_method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
+    
+    if http_method == 'POST':
+        return handle_add_certificate(event, table, logs_table)
+    elif http_method == 'PUT':
+        return handle_update_certificate(event, table, logs_table)
+    else:
+        return handle_get_certificates(table)
+
+def handle_get_certificates(table):
+    # Scan DynamoDB certificates table
+    # Convert Decimal → float (JSON compatibility)
+    # Convert datetime → ISO 8601 string
+    # Return JSON: {"certificates": [...], "count": 191}
+
+def handle_add_certificate(event, table, logs_table):
+    # Parse request body
+    # Validate required fields (CertificateName, Environment, Application, ExpiryDate, OwnerEmail)
+    # Generate unique CertificateID (UUID)
+    # Calculate status based on expiry date
+    # Calculate days until expiry
+    # Add certificate to DynamoDB
+    # Log action to certificate-logs table
+    # Return success/error response
+
+def handle_update_certificate(event, table, logs_table):
+    # Parse request body
+    # Validate CertificateID exists
+    # Recalculate status if expiry date changed
+    # Update certificate in DynamoDB
+    # Log action to certificate-logs table
+    # Return success/error response
+
+def calculate_status(expiry_date):
+    # Active: > 30 days until expiry
+    # Due for Renewal: 1-30 days until expiry
+    # Expired: past expiry date
+    
+def calculate_days_until_expiry(expiry_date):
+    # Calculate days from today to expiry
+    # Return positive (future) or negative (past)
 ```
 
 **2. certificate_monitor.py**
@@ -384,24 +439,327 @@ cert-dashboard/
 # Progress: "Batch 1: Imported 25 certificates..."
 ```
 
-**4. dashboard.js**
+**4. dashboard.js** ✨ UPDATED
 ```javascript
-// Fetch certificates from Lambda Function URL
-// Defensive DOM element checks (prevent null errors)
-// Render table, calculate statistics
-// Filter by status, environment, search term
-```
+// API Configuration
+const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
 
-**Fixed Null Check Example**:
-```javascript
-// BEFORE: uploadArea.addEventListener(...) → null error
-// AFTER:
+// Fetch certificates from Lambda Function URL (GET)
+async function fetchCertificatesFromAPI() {
+    const response = await fetch(API_URL, { method: 'GET' });
+    const data = await response.json();
+    return data.certificates;
+}
+
+// Add new certificate (POST)
+async function addNewCertificate(certData) {
+    // Calculate status and days until expiry
+    const status = calculateStatus(certData.ExpiryDate);
+    const daysLeft = calculateDaysLeft(certData.ExpiryDate);
+    
+    const newCert = {
+        ...certData,
+        CertificateID: generateUUID(),
+        Status: status,
+        DaysUntilExpiry: daysLeft.toString(),
+        CreatedOn: new Date().toISOString(),
+        ImportedFrom: 'Dashboard'
+    };
+    
+    // POST to API
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCert)
+    });
+    
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result;
+}
+
+// Update existing certificate (PUT)
+async function updateCertificate(certId, certData) {
+    const updateData = {
+        CertificateID: certId,
+        ...certData,
+        LastUpdatedOn: new Date().toISOString()
+    };
+    
+    // PUT to API
+    const response = await fetch(API_URL, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+    });
+    
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    return result;
+}
+
+// Defensive DOM element checks (prevent null errors)
 const uploadArea = document.getElementById('uploadArea');
 if (uploadArea && fileInput) {
     uploadArea.addEventListener('click', () => fileInput.click());
 } else {
     console.log('Upload elements not found, skipping');
 }
+
+// Render table, calculate statistics
+// Filter by status, environment, search term
+```
+
+**Critical Fixes Applied**:
+- ✅ Defined `API_URL` as constant at top of file
+- ✅ Changed all `CONFIG.apiUrl` references to `API_URL`
+- ✅ Added POST/PUT request handlers
+- ✅ Enhanced error messages with detailed logging
+- ✅ Fixed "CONFIG is not defined" error
+
+---
+
+## 📥 Manual Import Process
+
+### Why Manual Import?
+
+- Excel processor Lambda missing openpyxl library
+- Lambda layer not created in Terraform
+- **Workaround**: Standalone Python script works perfectly ✅
+
+### Execution
+
+**Prerequisites**:
+```bash
+pip install boto3 openpyxl
+aws configure  # Set credentials, region eu-west-1
+```
+
+**Run Import**:
+```bash
+python import_certificates.py --file PostNL_Certificates.xlsx
+```
+
+**Results**:
+```
+✅ Successfully imported 191 certificates
+   - 8 batches (25 items each, except last batch: 16)
+   - 100% success rate (0 failures)
+   - ~5 seconds total time
+```
+
+**Validation**:
+```bash
+# Verify count
+aws dynamodb scan --table-name cert-management-dev-certificates --select "COUNT"
+# Output: {"Count": 191}
+
+# Sample record
+aws dynamodb get-item --table-name cert-management-dev-certificates \
+  --key '{"CertificateID": {"S": "..."}}' | jq '.Item.CommonName.S'
+# Output: "adfs-aws2.p02.cldsvc.net"
+```
+
+### Features
+
+- **Flexible column mapping**: Handles different Excel formats, case-insensitive
+- **Multiple date formats**: DD/MM/YYYY, YYYY-MM-DD, Excel numeric
+- **Auto status**: Calculates Active/Expiring Soon/Expired based on expiry date
+- **Batch writes**: 25 items per API call (DynamoDB limit)
+- **Error handling**: Skips bad rows, continues processing, reports summary
+
+---
+
+## ➕ Add/Update Certificates via Dashboard ✨ NEW
+
+### Web-Based Certificate Management
+
+The dashboard now supports **adding and updating certificates** directly through the web interface with full DynamoDB persistence!
+
+### Add New Certificate
+
+**Method**: Click "Add Certificate" button on dashboard
+
+**Required Fields**:
+- Certificate Name (e.g., `api.example.com`)
+- Environment (Production, Staging, Development, Test)
+- Application (e.g., `API Gateway`)
+- Expiry Date (YYYY-MM-DD format)
+- Owner Email (must be valid email format)
+
+**Optional Fields**:
+- Certificate Type (SSL/TLS, Code Signing, etc.)
+- Support Email
+- Account Number
+- Serial Number
+
+**Automatic Calculations**:
+- **Status**: Automatically determined based on expiry date
+  - `Active`: > 30 days until expiry
+  - `Due for Renewal`: 1-30 days until expiry
+  - `Expired`: Past expiry date
+- **Days Until Expiry**: Calculated from current date
+- **Certificate ID**: Auto-generated UUID
+- **Timestamps**: CreatedOn and LastUpdatedOn
+
+**Example**:
+```
+Certificate Name: prod-api.example.com
+Environment: Production
+Application: Main API
+Expiry Date: 2026-03-15
+Type: SSL/TLS
+Owner Email: admin@example.com
+
+→ Status: Active (automatically calculated)
+→ Days Until Expiry: 137 (automatically calculated)
+→ Certificate ID: cert-a1b2c3d4... (auto-generated)
+```
+
+### Update Existing Certificate
+
+**Method**: Click "Edit" icon next to certificate in table
+
+**Editable Fields**: All certificate fields can be updated
+
+**Auto-Recalculation**: Status and days until expiry recalculated if expiry date changes
+
+### API Endpoints
+
+**Add Certificate** (POST)
+```bash
+curl -X POST https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "CertificateName": "test.example.com",
+    "Environment": "Test",
+    "Application": "Test App",
+    "ExpiryDate": "2026-06-15",
+    "Type": "SSL/TLS",
+    "OwnerEmail": "test@example.com",
+    "SupportEmail": "support@example.com"
+  }'
+```
+
+**Response (Success - 201)**:
+```json
+{
+  "success": true,
+  "message": "Certificate added successfully",
+  "certificate": {
+    "CertificateID": "cert-abc123...",
+    "CertificateName": "test.example.com",
+    "Environment": "Test",
+    "Status": "Active",
+    "DaysUntilExpiry": "229",
+    "CreatedOn": "2025-10-29T02:10:00Z",
+    ...
+  }
+}
+```
+
+**Response (Error - 400)**:
+```json
+{
+  "error": "Missing required fields",
+  "missing": ["CertificateName", "OwnerEmail"]
+}
+```
+
+**Update Certificate** (PUT)
+```bash
+curl -X PUT https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "CertificateID": "cert-abc123...",
+    "ExpiryDate": "2026-09-15",
+    "Status": "Active"
+  }'
+```
+
+**Response (Success - 200)**:
+```json
+{
+  "success": true,
+  "message": "Certificate updated successfully"
+}
+```
+
+### Field Validation
+
+**Email Validation**:
+```javascript
+// Must match: name@domain.ext
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+```
+
+**Date Validation**:
+- Format: YYYY-MM-DD
+- Must be a valid date
+
+**Required Field Check**:
+- Returns 400 error with list of missing fields
+
+### Audit Logging
+
+Every add/update operation is logged to `cert-management-dev-certificate-logs`:
+
+```json
+{
+  "LogID": "log-xyz789...",
+  "CertificateID": "cert-abc123...",
+  "Action": "CREATE",
+  "Timestamp": "2025-10-29T02:10:00Z",
+  "Details": "Certificate test.example.com added via dashboard",
+  "PerformedBy": "test@example.com"
+}
+```
+
+### Testing Tools
+
+**Test Suite**: Full automated test suite available
+```
+http://cert-management-dev-dashboard-a3px89bh.s3-website-eu-west-1.amazonaws.com/test-add-certificate.html
+```
+
+**Features**:
+- 6 automated validation tests
+- Test #6 performs actual API POST to DynamoDB
+- 3 pre-configured test scenarios
+- Live logging and statistics
+- Sample data generator
+
+**Simple Diagnostic Test**: Quick API test
+```
+http://cert-management-dev-dashboard-a3px89bh.s3-website-eu-west-1.amazonaws.com/test-api-simple.html
+```
+
+**Features**:
+- One-click API POST test
+- Detailed request/response logs
+- Error diagnosis
+- Browser-side validation
+
+### PowerShell Testing
+
+```powershell
+# Test adding certificate
+$cert = @{
+    CertificateName = "powershell-test.example.com"
+    Environment = "Test"
+    Application = "PowerShell Test"
+    ExpiryDate = (Get-Date).AddDays(90).ToString("yyyy-MM-dd")
+    Type = "SSL/TLS"
+    OwnerEmail = "test@example.com"
+} | ConvertTo-Json
+
+Invoke-WebRequest -Uri "https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx..." `
+  -Method POST `
+  -Body $cert `
+  -ContentType "application/json" `
+  -UseBasicParsing
+
+# Response: 201 Created
 ```
 
 ---
@@ -473,9 +831,10 @@ https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/
 
 ### Testing
 
+**Test GET (Fetch certificates)**:
 ```bash
-# Test API
-curl https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url... | jq '.count'
+# cURL
+curl https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/ | jq '.count'
 # Expected: 191
 
 # PowerShell
@@ -483,6 +842,73 @@ Invoke-RestMethod "https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx..." |
   Select count
 # Expected: 191
 ```
+
+**Test POST (Add certificate)** ✨ NEW:
+```bash
+# cURL
+curl -X POST https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "CertificateName": "test-api.example.com",
+    "Environment": "Test",
+    "Application": "API Test",
+    "ExpiryDate": "2026-06-15",
+    "Type": "SSL/TLS",
+    "OwnerEmail": "test@example.com"
+  }'
+# Expected: 201 Created
+
+# PowerShell
+$cert = @{
+    CertificateName = "test-powershell.example.com"
+    Environment = "Test"
+    Application = "PowerShell Test"
+    ExpiryDate = (Get-Date).AddDays(90).ToString("yyyy-MM-dd")
+    Type = "SSL/TLS"
+    OwnerEmail = "test@example.com"
+} | ConvertTo-Json
+
+$response = Invoke-WebRequest -Uri "https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx..." `
+  -Method POST `
+  -Body $cert `
+  -ContentType "application/json" `
+  -UseBasicParsing
+
+$response.Content | ConvertFrom-Json | ConvertTo-Json -Depth 5
+# Expected: {"success": true, "certificate": {...}}
+```
+
+**Test PUT (Update certificate)** ✨ NEW:
+```bash
+# cURL
+curl -X PUT https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "CertificateID": "cert-abc123...",
+    "ExpiryDate": "2026-09-15",
+    "OwnerEmail": "newemail@example.com"
+  }'
+# Expected: 200 OK
+
+# PowerShell
+$update = @{
+    CertificateID = "cert-abc123..."
+    ExpiryDate = "2026-09-15"
+    OwnerEmail = "newemail@example.com"
+} | ConvertTo-Json
+
+Invoke-WebRequest -Uri "https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx..." `
+  -Method PUT `
+  -Body $update `
+  -ContentType "application/json" `
+  -UseBasicParsing
+# Expected: {"success": true, "message": "Certificate updated successfully"}
+```
+
+**Browser Testing**:
+- **Dashboard**: http://cert-management-dev-dashboard-a3px89bh.s3-website-eu-west-1.amazonaws.com/
+- **Test Suite**: http://cert-management-dev-dashboard-a3px89bh.s3-website-eu-west-1.amazonaws.com/test-add-certificate.html
+- **Simple Test**: http://cert-management-dev-dashboard-a3px89bh.s3-website-eu-west-1.amazonaws.com/test-api-simple.html
 
 ### Environment Variables
 
@@ -537,20 +963,104 @@ aws configure
 python import_certificates.py --file cert.xlsx
 ```
 
+### 5. "CONFIG is not defined" Error ✨ FIXED
+
+**Symptom**: Error when clicking "Save Certificate" button
+
+**Root Cause**: Dashboard.js referenced `CONFIG.apiUrl` but variable was `API_CONFIG`
+
+**Solution Applied**:
+```javascript
+// BEFORE (❌ Error)
+const response = await fetch(CONFIG.apiUrl, {
+    method: 'POST',
+    ...
+});
+
+// AFTER (✅ Fixed)
+const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx...';
+const response = await fetch(API_URL, {
+    method: 'POST',
+    ...
+});
+```
+
+**Fix**:
+- Defined `API_URL` as constant at top of file
+- Changed all `CONFIG.apiUrl` references to `API_URL`
+- Updated index.html version number to force cache refresh
+
+### 6. Certificate Addition Fails
+
+**Symptoms**: "Failed to save certificate. Please try again."
+
+**Solutions**:
+- Hard refresh browser (Ctrl+Shift+R or Ctrl+F5)
+- Clear all browser cache (Ctrl+Shift+Delete)
+- Try in Incognito/Private browsing mode
+- Check browser Console (F12) for detailed error messages
+- Verify all required fields are filled
+- Ensure email format is valid
+- Test API directly:
+  ```bash
+  curl -X POST https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx... \
+    -H "Content-Type: application/json" \
+    -d '{"CertificateName":"test.com","Environment":"Test",...}'
+  ```
+
+### 7. Browser Cache Issues
+
+**Symptoms**: Changes not appearing, old errors persisting
+
+**Solutions**:
+```
+1. Hard Refresh:
+   - Windows: Ctrl + Shift + R (or Ctrl + F5)
+   - Mac: Cmd + Shift + R
+
+2. Clear Cache:
+   - Press Ctrl + Shift + Delete
+   - Select "Cached images and files"
+   - Clear last hour or all time
+
+3. Incognito Mode:
+   - Ctrl + Shift + N (Chrome/Edge)
+   - Ctrl + Shift + P (Firefox)
+
+4. Version Parameter:
+   - Add ?v=timestamp to URL
+   - Example: index.html?v=20251029
+```
+
 ### Diagnostic Tools
 
 **Browser DevTools (F12)**:
 ```
+Console Tab:
+- Shows JavaScript errors
+- Displays API request/response logs
+- Shows "CONFIG is not defined" errors
+
 Network Tab:
 - OPTIONS request (preflight) → 200 ✅
 - GET request → 200 ✅
+- POST request → 201 ✅
 - Response headers include Access-Control-Allow-Origin ✅
+- Check for duplicate CORS headers ❌
+
+Application Tab:
+- Clear cache and storage
+- View cookies and session data
 ```
 
 **CloudWatch Logs**:
 ```bash
 aws logs tail /aws/lambda/cert-management-dev-dashboard-api --follow
 ```
+
+**Test Pages**:
+- Full test suite: `/test-add-certificate.html`
+- Simple diagnostic: `/test-api-simple.html`
 
 ---
 
@@ -597,23 +1107,55 @@ aws logs tail /aws/lambda/cert-management-dev-dashboard-api --follow
 **✅ Working**:
 - Complete AWS infrastructure (28 resources)
 - DynamoDB with 191 certificates
-- Dashboard API (Lambda Function URL)
+- Dashboard API with GET, POST, PUT support ✨ NEW
 - Daily monitoring + email notifications
 - Web dashboard (S3 static hosting)
+- **Add/Update certificates via web interface** ✨ NEW
+- **Automatic status calculation** ✨ NEW
+- **Field validation and error handling** ✨ NEW
+- **Audit logging for all operations** ✨ NEW
 - Manual import script
 - CORS properly configured
+- Complete test suite for certificate addition ✨ NEW
 
 **⚠️ Limitations**:
 - Excel processor Lambda needs openpyxl layer
 - SES sandbox mode (verify recipients)
-- Dashboard upload feature not implemented
+- Dashboard Excel upload feature not implemented (use manual import script)
 
 **🔧 Next Steps**:
 1. Request SES production access
-2. Add Lambda layer with openpyxl
+2. Add Lambda layer with openpyxl for Excel processor
 3. Configure CloudWatch alarms
 4. Set S3 lifecycle policies
 5. Add CloudFront for HTTPS
+6. Implement delete certificate functionality
+7. Add bulk certificate update feature
+8. Create certificate renewal workflow
+
+**📊 Recent Updates** (October 29, 2025):
+- ✅ Added POST endpoint to Lambda API for creating certificates
+- ✅ Added PUT endpoint to Lambda API for updating certificates
+- ✅ Implemented automatic status calculation (Active/Due for Renewal/Expired)
+- ✅ Implemented automatic days until expiry calculation
+- ✅ Added field validation (required fields, email format)
+- ✅ Added audit logging to certificate-logs table
+- ✅ Updated dashboard.js to support add/update operations
+- ✅ Fixed "CONFIG is not defined" error
+- ✅ Added detailed error logging and messages
+- ✅ Created comprehensive test suite (test-add-certificate.html)
+- ✅ Created simple diagnostic test (test-api-simple.html)
+- ✅ Updated CORS configuration to support POST/PUT methods
+
+**🎯 Current Capabilities**:
+1. **View Certificates**: Browse all 191 certificates with filtering and search
+2. **Add Certificates**: Add new certificates via web form or API
+3. **Update Certificates**: Edit existing certificates via web form or API
+4. **Monitor Certificates**: Daily automated checks for expiring certificates
+5. **Email Alerts**: Automatic notifications for certificates expiring within 30 days
+6. **Bulk Import**: Import certificates from Excel files
+7. **Audit Trail**: Complete logs of all create/update operations
+8. **Testing**: Full test suite to validate all functionality
 
 ---
 

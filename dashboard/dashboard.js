@@ -1,4 +1,7 @@
 // Certificate Management Dashboard - JavaScript
+// API Configuration
+const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+
 // Configuration (these will be populated from environment variables)
 let API_CONFIG = {
     region: 'eu-west-1',
@@ -87,8 +90,6 @@ async function loadCertificates() {
 
 async function fetchCertificatesFromAPI() {
     // Call the actual DynamoDB API to get real certificate data
-    const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
-    
     try {
         console.log('Fetching certificates from API...');
         const response = await fetch(API_URL, {
@@ -398,11 +399,15 @@ async function handleCertificateSubmit(event) {
         AccountNumber: document.getElementById('certAccountNumber').value,
     };
     
+    console.log('Form data to submit:', formData);
+    
     try {
         if (currentEditingCert) {
+            console.log('Updating certificate:', currentEditingCert.CertificateID);
             await updateCertificate(currentEditingCert.CertificateID, formData);
             showSuccess('Certificate updated successfully!');
         } else {
+            console.log('Adding new certificate...');
             await addNewCertificate(formData);
             showSuccess('Certificate added successfully!');
         }
@@ -412,7 +417,8 @@ async function handleCertificateSubmit(event) {
         
     } catch (error) {
         console.error('Error saving certificate:', error);
-        showError('Failed to save certificate. Please try again.');
+        console.error('Error details:', error.message, error.stack);
+        showError('Failed to save certificate. Please try again. Error: ' + error.message);
     }
 }
 
@@ -431,27 +437,87 @@ async function addNewCertificate(certData) {
         ...certData,
         CertificateID: generateUUID(),
         Status: status,
+        DaysUntilExpiry: daysLeft.toString(),
         LastUpdatedOn: new Date().toISOString(),
         CreatedOn: new Date().toISOString(),
-        Version: 1
+        Version: 1,
+        ImportedFrom: 'Dashboard'
     };
     
-    // In production, this would call the API
-    console.log('Adding new certificate:', newCert);
-    allCertificates.push(newCert);
+    console.log('Sending POST request to:', API_URL);
+    console.log('Certificate data:', newCert);
+    
+    // Call the API to add certificate to DynamoDB
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newCert)
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
+        const result = await response.json();
+        console.log('Response data:', result);
+        
+        if (!response.ok) {
+            const errorMsg = result.error || result.message || 'Failed to add certificate';
+            console.error('API error:', errorMsg);
+            throw new Error(errorMsg);
+        }
+        
+        console.log('Certificate added successfully:', result);
+        return result;
+    } catch (error) {
+        console.error('Error in addNewCertificate:', error);
+        throw error;
+    }
 }
 
 async function updateCertificate(certId, certData) {
-    // In production, this would call the API
-    console.log('Updating certificate:', certId, certData);
+    // Calculate status if expiry date changed
+    if (certData.ExpiryDate) {
+        const daysLeft = calculateDaysLeft(certData.ExpiryDate);
+        if (daysLeft < 0) {
+            certData.Status = 'Expired';
+        } else if (daysLeft <= 30) {
+            certData.Status = 'Due for Renewal';
+        } else {
+            certData.Status = 'Active';
+        }
+        certData.DaysUntilExpiry = daysLeft.toString();
+    }
     
-    const index = allCertificates.findIndex(cert => cert.CertificateID === certId);
-    if (index !== -1) {
-        allCertificates[index] = {
-            ...allCertificates[index],
-            ...certData,
-            LastUpdatedOn: new Date().toISOString()
-        };
+    const updateData = {
+        ...certData,
+        CertificateID: certId,
+        LastUpdatedOn: new Date().toISOString()
+    };
+    
+    // Call the API to update certificate in DynamoDB
+    try {
+        const response = await fetch(API_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || result.message || 'Failed to update certificate');
+        }
+        
+        console.log('Certificate updated successfully:', result);
+        return result;
+    } catch (error) {
+        console.error('Error updating certificate:', error);
+        throw error;
     }
 }
 
