@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Diagnostic - Network Tab Required</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .log {
+            background: #f8f8f8;
+            padding: 10px;
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 12px;
+            border-left: 3px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        code {
+            background: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 CORS Network Diagnostic</h1>
+    
+    <div class="instructions">
+        <h2>⚠️ CRITICAL INSTRUCTIONS - DO THIS FIRST:</h2>
+        <ol>
+            <li><strong>Open Browser Developer Tools</strong> (F12 or Right-click → Inspect)</li>
+            <li><strong>Click on the "Network" tab</strong></li>
+            <li><strong>Make sure "Preserve log" is checked</strong></li>
+            <li><strong>Clear the network log</strong> (click the 🚫 icon)</li>
+            <li><strong>Click the button below</strong></li>
+            <li><strong>Look for TWO requests in the Network tab:</strong>
+                <ul>
+                    <li>First request: <code>OPTIONS</code> (preflight) - THIS MUST SUCCEED</li>
+                    <li>Second request: <code>GET</code> (actual request)</li>
+                </ul>
+            </li>
+            <li><strong>Click on each request and check:</strong>
+                <ul>
+                    <li>Status code (should be 200)</li>
+                    <li>Response Headers (look for <code>access-control-allow-origin</code>)</li>
+                    <li>Any error messages</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="box">
+        <h2>Test CORS Request</h2>
+        <button onclick="testCORS()">🚀 Send CORS Request (Watch Network Tab!)</button>
+        <button onclick="clearLog()">Clear Log</button>
+        <div id="results"></div>
+    </div>
+
+    <div class="box">
+        <h2>📊 What to Look For in Network Tab:</h2>
+        <h3>Scenario 1: SUCCESS ✅</h3>
+        <pre>OPTIONS request → Status 200 → Headers have access-control-allow-origin: *
+GET request → Status 200 → Returns data</pre>
+        
+        <h3>Scenario 2: CORS Preflight Failed ❌</h3>
+        <pre>OPTIONS request → Status 200 but MISSING access-control headers
+→ Browser blocks GET request
+→ You see "CORS policy" error in console</pre>
+        
+        <h3>Scenario 3: OPTIONS Not Handled ❌</h3>
+        <pre>OPTIONS request → Status 403 or 405
+→ Lambda Function URL not configured correctly
+→ Need to fix Terraform CORS settings</pre>
+    </div>
+
+    <script>
+        const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+        
+        function log(msg, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'log' + (isError ? ' error' : '');
+            div.textContent = new Date().toISOString() + ' - ' + msg;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function clearLog() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testCORS() {
+            log('🚀 Starting CORS test...');
+            log('📡 Target URL: ' + API_URL);
+            log('');
+            log('⚠️ NOW WATCH THE NETWORK TAB IN DEVELOPER TOOLS');
+            log('⚠️ You should see TWO requests: OPTIONS then GET');
+            log('');
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'omit'
+                });
+                
+                log('✅ Response Status: ' + response.status);
+                log('Response Headers:');
+                response.headers.forEach((value, key) => {
+                    log('  ' + key + ': ' + value);
+                });
+                
+                const data = await response.json();
+                log('✅ SUCCESS! Got ' + data.count + ' certificates');
+                log('');
+                log('🎉 CORS IS WORKING! Check Network tab to see both OPTIONS and GET succeeded.');
+                
+            } catch (error) {
+                log('❌ FAILED: ' + error.message, true);
+                log('', true);
+                log('📋 TROUBLESHOOTING STEPS:', true);
+                log('1. Open Network tab in Developer Tools (F12)', true);
+                log('2. Look for the OPTIONS request (preflight)', true);
+                log('3. Check if OPTIONS returned 200 with CORS headers', true);
+                log('4. If OPTIONS failed or missing headers → Lambda Function URL CORS issue', true);
+                log('5. Screenshot the Network tab and share', true);
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            log('✅ Page loaded successfully');
+            log('📍 Current page: ' + window.location.href);
+            log('🌐 User Agent: ' + navigator.userAgent);
+            log('');
+            log('👆 Click the button above AND watch the Network tab in DevTools (F12)');
+        });
+    </script>
+</body>
+</html>

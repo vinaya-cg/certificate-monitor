@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ultimate Debug Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+        .log { background: #111; padding: 5px; margin: 2px 0; border-left: 3px solid #0f0; }
+        .error { border-left-color: #f00; color: #f88; }
+    </style>
+</head>
+<body>
+    <h1>Ultimate Debug Test</h1>
+    <div id="logs"></div>
+    
+    <script>
+        const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+        
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = isError ? 'log error' : 'log';
+            div.textContent = new Date().toISOString() + ' - ' + message;
+            document.getElementById('logs').appendChild(div);
+            console.log(message);
+        }
+        
+        log('Page loaded');
+        log('API URL: ' + API_URL);
+        log('Current page URL: ' + window.location.href);
+        log('Protocol: ' + window.location.protocol);
+        
+        // Test 1: Check if fetch exists
+        log('Fetch API available: ' + (typeof fetch !== 'undefined'));
+        
+        // Test 2: Try fetch with full logging
+        log('Starting fetch request...');
+        
+        fetch(API_URL, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            log('Response received!');
+            log('Status: ' + response.status);
+            log('Status Text: ' + response.statusText);
+            log('OK: ' + response.ok);
+            log('Type: ' + response.type);
+            log('URL: ' + response.url);
+            
+            // Log all headers
+            log('Response Headers:');
+            response.headers.forEach((value, key) => {
+                log('  ' + key + ': ' + value);
+            });
+            
+            return response.json();
+        })
+        .then(data => {
+            log('JSON parsed successfully!');
+            log('Count: ' + data.count);
+            log('Certificates array length: ' + data.certificates.length);
+            log('First cert: ' + data.certificates[0].CertificateName);
+            log('✅ SUCCESS! All working!');
+            
+            document.body.innerHTML += '<h2 style="color:#0f0">✅ SUCCESS!</h2><p>Count: ' + data.count + '</p>';
+        })
+        .catch(error => {
+            log('❌ ERROR: ' + error.message, true);
+            log('Error name: ' + error.name, true);
+            log('Error stack: ' + error.stack, true);
+            
+            // Try to get more details
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                log('This is likely a CORS or network connectivity issue', true);
+            }
+            
+            document.body.innerHTML += '<h2 style="color:#f00">❌ FAILED</h2><p>' + error.message + '</p>';
+        });
+        
+        log('Fetch request initiated (waiting for response...)');
+    </script>
+</body>
+</html>

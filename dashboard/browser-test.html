@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser CORS Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .log {
+            background: #f8f8f8;
+            padding: 15px;
+            border-left: 4px solid #4CAF50;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .success {
+            border-left-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        #results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Browser CORS Debug Test</h1>
+    <div class="test-box">
+        <h2>Instructions:</h2>
+        <ol>
+            <li><strong>Open this page in a REAL browser (Chrome, Firefox, Edge)</strong> - NOT VS Code Simple Browser</li>
+            <li>Click the test buttons below</li>
+            <li>Check the results</li>
+        </ol>
+        <p><strong>Why?</strong> VS Code's Simple Browser has stricter CORS policies that may block requests that work in regular browsers.</p>
+    </div>
+
+    <div class="test-box">
+        <h2>Quick Tests:</h2>
+        <button onclick="testFetchSimple()">Test 1: Simple Fetch</button>
+        <button onclick="testFetchNoCors()">Test 2: No-CORS Mode</button>
+        <button onclick="testXHR()">Test 3: XMLHttpRequest</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+        
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'log ' + (isError ? 'error' : 'success');
+            div.textContent = new Date().toISOString() + ' - ' + message;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testFetchSimple() {
+            log('TEST 1: Simple Fetch with CORS mode');
+            log('URL: ' + API_URL);
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log('✅ Response Status: ' + response.status);
+                log('Response Headers:');
+                response.headers.forEach((value, key) => {
+                    log('  ' + key + ': ' + value);
+                });
+                
+                const data = await response.json();
+                log('✅ SUCCESS! Got ' + data.count + ' certificates');
+                log('First certificate: ' + (data.certificates[0]?.common_name || 'N/A'));
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message, true);
+                log('Error Type: ' + error.name, true);
+                log('Error Stack: ' + error.stack, true);
+            }
+        }
+
+        async function testFetchNoCors() {
+            log('TEST 2: Fetch with no-cors mode (limited response access)');
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    mode: 'no-cors'
+                });
+                
+                log('✅ Response received with no-cors mode');
+                log('Status: ' + response.status + ' (may be 0 in no-cors)');
+                log('Type: ' + response.type);
+                log('⚠️ NOTE: no-cors mode means we cannot read the response body');
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message, true);
+            }
+        }
+
+        async function testXHR() {
+            log('TEST 3: XMLHttpRequest (older API)');
+            
+            const xhr = new XMLHttpRequest();
+            
+            xhr.onload = function() {
+                log('✅ XHR Success! Status: ' + xhr.status);
+                log('Response length: ' + xhr.responseText.length + ' bytes');
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    log('✅ Parsed ' + data.count + ' certificates');
+                } catch (e) {
+                    log('❌ Failed to parse JSON: ' + e.message, true);
+                }
+            };
+            
+            xhr.onerror = function() {
+                log('❌ XHR Error occurred', true);
+            };
+            
+            xhr.ontimeout = function() {
+                log('❌ XHR Timeout', true);
+            };
+            
+            xhr.open('GET', API_URL);
+            xhr.send();
+        }
+
+        // Auto-run info
+        window.addEventListener('load', function() {
+            log('Page loaded in browser: ' + navigator.userAgent);
+            log('Location: ' + window.location.href);
+            log('Protocol: ' + window.location.protocol);
+            log('');
+            log('👆 Click the test buttons above to run CORS tests');
+        });
+    </script>
+</body>
+</html>

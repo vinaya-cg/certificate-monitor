@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Test - Fixed Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Dashboard Fix Verification Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: API Connectivity</h2>
+        <div id="apiTest">Testing API...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Data Loading</h2>
+        <div id="dataTest">Loading data...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: DOM Elements</h2>
+        <div id="domTest">Checking DOM elements...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Sample Certificates (First 10)</h2>
+        <div id="sampleData">Loading sample data...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Logs</h2>
+        <div id="consoleLogs"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://64k6fjrv3ipozjh3hihpgcthxq0iymkh.lambda-url.eu-west-1.on.aws/';
+        const logs = [];
+        
+        function log(message, type = 'info') {
+            logs.push({message, type, time: new Date().toISOString()});
+            updateConsoleLogs();
+        }
+        
+        function updateConsoleLogs() {
+            const container = document.getElementById('consoleLogs');
+            container.innerHTML = '<pre>' + logs.map(l => 
+                `[${l.time.split('T')[1].split('.')[0]}] ${l.type.toUpperCase()}: ${l.message}`
+            ).join('\n') + '</pre>';
+        }
+        
+        async function runTests() {
+            // Test 1: API Connectivity
+            try {
+                log('Testing API connectivity...');
+                const response = await fetch(API_URL);
+                log(`API Response Status: ${response.status}`);
+                
+                if (!response.ok) {
+                    document.getElementById('apiTest').innerHTML = 
+                        `<span class="error">❌ API Failed: ${response.status} ${response.statusText}</span>`;
+                    log(`API Error: ${response.status}`, 'error');
+                    return;
+                }
+                
+                const data = await response.json();
+                log(`API returned ${data.count} certificates`);
+                document.getElementById('apiTest').innerHTML = 
+                    `<span class="success">✅ API Working: ${data.count} certificates returned</span>`;
+                
+                // Test 2: Data Loading
+                if (data.certificates && data.certificates.length > 0) {
+                    document.getElementById('dataTest').innerHTML = 
+                        `<span class="success">✅ Data Loaded: ${data.certificates.length} certificates</span>`;
+                    log(`Successfully loaded ${data.certificates.length} certificates`);
+                    
+                    // Test 3: DOM Elements Check
+                    const requiredElements = [
+                        'certificatesBody',
+                        'certificateCount',
+                        'activeCount',
+                        'renewalCount',
+                        'progressCount',
+                        'expiredCount',
+                        'searchBox',
+                        'statusFilter',
+                        'environmentFilter'
+                    ];
+                    
+                    const domResults = [];
+                    requiredElements.forEach(id => {
+                        const element = document.getElementById(id);
+                        const exists = element !== null;
+                        domResults.push(`${exists ? '✅' : '❌'} ${id}: ${exists ? 'Found' : 'MISSING'}`);
+                        log(`DOM Element ${id}: ${exists ? 'Found' : 'MISSING'}`, exists ? 'info' : 'error');
+                    });
+                    
+                    document.getElementById('domTest').innerHTML = domResults.join('<br>');
+                    
+                    // Test 4: Sample Data
+                    const sample = data.certificates.slice(0, 10);
+                    let tableHTML = '<table><thead><tr><th>Name</th><th>Environment</th><th>Status</th><th>Expiry</th></tr></thead><tbody>';
+                    
+                    sample.forEach(cert => {
+                        tableHTML += `
+                            <tr>
+                                <td>${cert.CertificateName}</td>
+                                <td>${cert.Environment}</td>
+                                <td>${cert.Status}</td>
+                                <td>${cert.ExpiryDate}</td>
+                            </tr>
+                        `;
+                        log(`Sample: ${cert.CertificateName} - ${cert.Status}`);
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    document.getElementById('sampleData').innerHTML = tableHTML;
+                    
+                } else {
+                    document.getElementById('dataTest').innerHTML = 
+                        `<span class="error">❌ No certificates in API response</span>`;
+                    log('No certificates in API response', 'error');
+                }
+                
+            } catch (error) {
+                document.getElementById('apiTest').innerHTML = 
+                    `<span class="error">❌ Error: ${error.message}</span>`;
+                log(`Test failed: ${error.message}`, 'error');
+                console.error('Test error:', error);
+            }
+        }
+        
+        // Run tests when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            log('Page loaded, starting tests...');
+            runTests();
+        });
+    </script>
+</body>
+</html>
