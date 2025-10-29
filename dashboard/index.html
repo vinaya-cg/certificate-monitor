@@ -164,18 +164,20 @@
         }
 
         .table-wrapper {
-            overflow-x: auto;
+            overflow-x: visible;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: auto;
         }
 
         th, td {
             padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid #eee;
+            font-size: 14px;
         }
 
         th {
@@ -184,7 +186,33 @@
             color: #333;
             position: sticky;
             top: 0;
+            white-space: nowrap;
+            user-select: none;
         }
+        
+        th[onclick]:hover {
+            background-color: #e9ecef;
+        }
+        
+        th .fa-sort, th .fa-sort-up, th .fa-sort-down {
+            margin-left: 5px;
+            font-size: 12px;
+            opacity: 0.5;
+        }
+        
+        th .fa-sort-up, th .fa-sort-down {
+            opacity: 1;
+            color: #667eea;
+        }
+        
+        /* Optimize column widths for better layout */
+        th:nth-child(1), td:nth-child(1) { width: 20%; } /* Certificate Name */
+        th:nth-child(2), td:nth-child(2) { width: 10%; } /* Environment */
+        th:nth-child(3), td:nth-child(3) { width: 15%; } /* Application */
+        th:nth-child(4), td:nth-child(4) { width: 12%; } /* Status */
+        th:nth-child(5), td:nth-child(5) { width: 12%; } /* Expiry Date */
+        th:nth-child(6), td:nth-child(6) { width: 11%; } /* Days Left */
+        th:nth-child(7), td:nth-child(7) { width: 20%; } /* Actions */
 
         tr:hover {
             background-color: #f8f9fa;
@@ -202,6 +230,16 @@
         .status-renewal { background: #fff3cd; color: #856404; }
         .status-progress { background: #d1ecf1; color: #0c5460; }
         .status-expired { background: #f8d7da; color: #721c24; }
+        
+        .environment-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            background: #e3f2fd;
+            color: #1976d2;
+            white-space: nowrap;
+        }
 
         .days-badge {
             padding: 4px 8px;
@@ -216,13 +254,45 @@
 
         .action-buttons {
             display: flex;
-            gap: 5px;
+            gap: 8px;
+            flex-wrap: wrap;
         }
 
         .btn-small {
-            padding: 5px 10px;
+            padding: 6px 12px;
             font-size: 12px;
-            border-radius: 3px;
+            border-radius: 4px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+        
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background-color: #138496;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #5a6268;
         }
 
         .modal {
@@ -346,11 +416,30 @@
             }
 
             .table-wrapper {
-                font-size: 14px;
+                font-size: 12px;
+                overflow-x: auto;
             }
 
             th, td {
-                padding: 8px 10px;
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+            
+            /* Reset column widths on mobile for better fit */
+            th, td {
+                width: auto !important;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .btn-small {
+                padding: 5px 8px;
+                font-size: 11px;
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -425,13 +514,24 @@
                 <table id="certificatesTable">
                     <thead>
                         <tr>
-                            <th>Certificate Name</th>
-                            <th>Environment</th>
-                            <th>Application</th>
-                            <th>Status</th>
-                            <th>Expiry Date</th>
-                            <th>Days Left</th>
-                            <th>Owner</th>
+                            <th onclick="sortTable('CertificateName')" style="cursor: pointer;">
+                                Certificate Name <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('Environment')" style="cursor: pointer;">
+                                Environment <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('Application')" style="cursor: pointer;">
+                                Application <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('Status')" style="cursor: pointer;">
+                                Status <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('ExpiryDate')" style="cursor: pointer;">
+                                Expiry Date <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="sortTable('DaysLeft')" style="cursor: pointer;">
+                                Days Left <i class="fas fa-sort"></i>
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -551,6 +651,6 @@
         </div>
     </div>
 
-    <script src="dashboard.js?v=20251029-0210"></script>
+    <script src="dashboard.js?v=20251029-1630"></script>
 </body>
 </html>

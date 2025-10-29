@@ -16,6 +16,8 @@ let API_CONFIG = {
 let allCertificates = [];
 let filteredCertificates = [];
 let currentEditingCert = null;
+let currentSortColumn = null;
+let currentSortDirection = 'asc';
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -144,7 +146,11 @@ function updateStatistics() {
     };
     
     allCertificates.forEach(cert => {
-        switch (cert.Status) {
+        // Calculate actual status based on expiry date
+        const daysLeft = calculateDaysLeft(cert.ExpiryDate);
+        const actualStatus = calculateActualStatus(daysLeft, cert.Status);
+        
+        switch (actualStatus) {
             case 'Active':
                 stats.active++;
                 break;
@@ -205,8 +211,12 @@ function createCertificateRow(cert) {
     const row = document.createElement('tr');
     
     const daysLeft = calculateDaysLeft(cert.ExpiryDate);
+    
+    // Recalculate status based on actual expiry date (override database status if needed)
+    const actualStatus = calculateActualStatus(daysLeft, cert.Status);
+    
     const daysLeftBadge = createDaysLeftBadge(daysLeft);
-    const statusBadge = createStatusBadge(cert.Status);
+    const statusBadge = createStatusBadge(actualStatus);
     
     row.innerHTML = `
         <td>
@@ -221,27 +231,49 @@ function createCertificateRow(cert) {
         <td>${formatDate(cert.ExpiryDate)}</td>
         <td>${daysLeftBadge}</td>
         <td>
-            ${cert.OwnerEmail ? `<a href="mailto:${cert.OwnerEmail}">${cert.OwnerEmail}</a>` : '-'}
-        </td>
-        <td>
             <div class="action-buttons">
-                <button class="btn btn-primary btn-small" onclick="editCertificate('${cert.CertificateID}')" title="Edit">
-                    <i class="fas fa-edit"></i>
+                <button class="btn btn-primary btn-small" onclick="editCertificate('${cert.CertificateID}')" title="Edit Certificate">
+                    <i class="fas fa-edit"></i> Edit
                 </button>
                 <button class="btn btn-success btn-small" onclick="updateStatus('${cert.CertificateID}')" title="Update Status">
-                    <i class="fas fa-tasks"></i>
+                    <i class="fas fa-tasks"></i> Status
                 </button>
                 <button class="btn btn-warning btn-small" onclick="renewCertificate('${cert.CertificateID}')" title="Upload Renewed Certificate">
-                    <i class="fas fa-upload"></i>
+                    <i class="fas fa-upload"></i> Upload
                 </button>
-                <button class="btn btn-info btn-small" onclick="viewLogs('${cert.CertificateID}')" title="View Logs">
-                    <i class="fas fa-history"></i>
+                <button class="btn btn-info btn-small" onclick="startRenewal('${cert.CertificateID}')" title="Start Renewal Process">
+                    <i class="fas fa-sync-alt"></i> Renew
+                </button>
+                <button class="btn btn-secondary btn-small" onclick="viewLogs('${cert.CertificateID}')" title="View History">
+                    <i class="fas fa-history"></i> Logs
                 </button>
             </div>
         </td>
     `;
     
     return row;
+}
+
+function calculateActualStatus(daysLeft, currentStatus) {
+    // Calculate status based on days left, but preserve manual status like "Renewal in Progress"
+    if (daysLeft === null || daysLeft === undefined) {
+        return currentStatus || 'Unknown';
+    }
+    
+    // Preserve manual statuses
+    const manualStatuses = ['Renewal in Progress', 'Renewal Done'];
+    if (manualStatuses.includes(currentStatus)) {
+        return currentStatus;
+    }
+    
+    // Calculate based on days left
+    if (daysLeft < 0) {
+        return 'Expired';
+    } else if (daysLeft <= 30) {
+        return 'Due for Renewal';
+    } else {
+        return 'Active';
+    }
 }
 
 function createStatusBadge(status) {
@@ -346,6 +378,100 @@ function populateEnvironmentFilter() {
     });
     
     console.log(`populateEnvironmentFilter: Added ${environments.length} environments to filter`);
+}
+
+function sortTable(column) {
+    // Toggle sort direction if clicking the same column
+    if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc';
+    }
+    
+    // Sort the filtered certificates
+    filteredCertificates.sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(column) {
+            case 'CertificateName':
+                aValue = a.CertificateName || '';
+                bValue = b.CertificateName || '';
+                break;
+            case 'Environment':
+                aValue = a.Environment || '';
+                bValue = b.Environment || '';
+                break;
+            case 'Application':
+                aValue = a.Application || '';
+                bValue = b.Application || '';
+                break;
+            case 'Status':
+                aValue = a.Status || '';
+                bValue = b.Status || '';
+                break;
+            case 'ExpiryDate':
+                aValue = new Date(a.ExpiryDate || '9999-12-31');
+                bValue = new Date(b.ExpiryDate || '9999-12-31');
+                break;
+            case 'DaysLeft':
+                aValue = calculateDaysLeft(a.ExpiryDate);
+                bValue = calculateDaysLeft(b.ExpiryDate);
+                // Handle null values
+                if (aValue === null) aValue = -9999;
+                if (bValue === null) bValue = -9999;
+                break;
+            default:
+                return 0;
+        }
+        
+        // Compare values
+        let comparison = 0;
+        if (aValue > bValue) {
+            comparison = 1;
+        } else if (aValue < bValue) {
+            comparison = -1;
+        }
+        
+        // Apply sort direction
+        return currentSortDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    // Update sort icons in headers
+    updateSortIcons(column);
+    
+    // Re-render the table
+    renderCertificatesTable();
+}
+
+function updateSortIcons(activeColumn) {
+    // Reset all sort icons
+    const headers = document.querySelectorAll('th[onclick]');
+    headers.forEach(header => {
+        const icon = header.querySelector('i');
+        if (icon) {
+            icon.className = 'fas fa-sort';
+        }
+    });
+    
+    // Update the active column icon
+    const columnMap = {
+        'CertificateName': 0,
+        'Environment': 1,
+        'Application': 2,
+        'Status': 3,
+        'ExpiryDate': 4,
+        'DaysLeft': 5
+    };
+    
+    const columnIndex = columnMap[activeColumn];
+    if (columnIndex !== undefined) {
+        const activeHeader = headers[columnIndex];
+        const icon = activeHeader.querySelector('i');
+        if (icon) {
+            icon.className = currentSortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+    }
 }
 
 // ===================================================================
@@ -601,6 +727,80 @@ async function updateCertificateStatus(certId, statusData) {
 // ===================================================================
 // CERTIFICATE RENEWAL
 // ===================================================================
+// CERTIFICATE RENEWAL FUNCTIONS
+// ===================================================================
+
+function startRenewal(certId) {
+    const cert = allCertificates.find(c => c.CertificateID === certId);
+    if (!cert) {
+        showError('Certificate not found');
+        return;
+    }
+    
+    // Confirm renewal action
+    const confirmMessage = `Start renewal process for:\n\n` +
+                          `Certificate: ${cert.CertificateName}\n` +
+                          `Environment: ${cert.Environment}\n` +
+                          `Current Status: ${cert.Status}\n` +
+                          `Expiry Date: ${formatDate(cert.ExpiryDate)}\n\n` +
+                          `This will change the status to "Renewal in Progress".\n\n` +
+                          `Continue?`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    // Update certificate status to "Renewal in Progress"
+    updateCertificateStatus(certId, 'Renewal in Progress', 'Renewal process initiated');
+}
+
+async function updateCertificateStatus(certId, newStatus, notes = '') {
+    try {
+        showLoading(true);
+        
+        const cert = allCertificates.find(c => c.CertificateID === certId);
+        if (!cert) {
+            throw new Error('Certificate not found');
+        }
+        
+        // Prepare update payload
+        const updatePayload = {
+            CertificateID: certId,
+            Status: newStatus,
+            LastModified: new Date().toISOString(),
+            Notes: notes
+        };
+        
+        console.log('Updating certificate status:', updatePayload);
+        
+        const response = await fetch(API_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatePayload)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Failed to update status: ${response.status} - ${errorData}`);
+        }
+        
+        const result = await response.json();
+        console.log('Status update result:', result);
+        
+        showSuccess(`Certificate status updated to "${newStatus}"`);
+        
+        // Reload certificates to get updated data
+        await loadCertificates();
+        
+    } catch (error) {
+        console.error('Error updating certificate status:', error);
+        showError(`Failed to update status: ${error.message}`);
+    } finally {
+        showLoading(false);
+    }
+}
 
 function renewCertificate(certId) {
     const cert = allCertificates.find(c => c.CertificateID === certId);

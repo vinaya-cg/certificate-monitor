@@ -2,6 +2,7 @@
 
 ## 📋 Table of Contents
 - [Overview](#overview)
+- [Latest Updates](#latest-updates)
 - [Architecture](#architecture)
 - [AWS Services & Resources](#aws-services--resources)
 - [Deployment Details](#deployment-details)
@@ -21,7 +22,10 @@ A complete AWS-based certificate monitoring and management system with automated
 - ✅ **Automated Certificate Monitoring**: Daily Lambda scans for expiring certificates
 - ✅ **Email Notifications**: SES-based alerts for certificates expiring within 30 days  
 - ✅ **Web Dashboard**: Real-time certificate viewing with filtering and search
-- ✅ **Add/Update Certificates**: Web-based interface to add and update certificates directly ✨ NEW
+- ✅ **Column Sorting**: Click any column header to sort ascending/descending 🆕
+- ✅ **Add/Update Certificates**: Web-based interface to add and update certificates directly
+- ✅ **Renewal Workflow**: One-click renewal process with status tracking 🆕
+- ✅ **Smart Status Validation**: Auto-corrects expired certificates showing as active 🆕
 - ✅ **Bulk Import**: Python script for importing certificates from Excel files
 - ✅ **Complete Audit Trail**: All changes logged in DynamoDB
 - ✅ **Infrastructure as Code**: 100% Terraform-managed AWS infrastructure
@@ -32,7 +36,62 @@ A complete AWS-based certificate monitoring and management system with automated
 - **Region**: `eu-west-1` (Ireland)
 - **Deployment Method**: Terraform + AWS CLI
 - **Certificates Imported**: 191 PostNL certificates
+- **Dashboard Version**: `20251029-1630`
 - **Status**: Production-ready
+
+---
+
+## 🆕 Latest Updates
+
+### October 29, 2025 - UI/UX Enhancements
+
+#### 1. **Improved Button Visibility**
+- ✅ Added text labels to all action buttons (Edit, Status, Upload, Renew, Logs)
+- ✅ Better spacing and alignment with icons
+- ✅ Mobile-responsive button layout
+
+#### 2. **Optimized Table Layout**
+- ✅ Removed horizontal scroll - all data fits on one page
+- ✅ Hidden Owner column (still available in edit form)
+- ✅ Optimized column widths for better readability
+- ✅ Added environment badge styling
+
+#### 3. **Column Sorting Feature**
+- ✅ Click any column header to sort data
+- ✅ Visual indicators (↑↓) show sort direction
+- ✅ Supports sorting by:
+  - Certificate Name (alphabetical)
+  - Environment (alphabetical)
+  - Application (alphabetical)
+  - Status (alphabetical)
+  - Expiry Date (chronological)
+  - Days Left (numerical)
+
+#### 4. **Renewal Button Added**
+- ✅ New "Renew" button for quick renewal initiation
+- ✅ Confirmation dialog before status update
+- ✅ Auto-updates status to "Renewal in Progress"
+- ✅ Integrated with audit logging
+
+#### 5. **Status Validation Fix** 🐛
+- ✅ **Critical Fix**: Expired certificates now display correctly
+- ✅ Client-side status recalculation based on expiry date
+- ✅ Overrides stale database status while preserving manual statuses
+- ✅ Statistics cards show accurate counts
+- **Logic**:
+  - Days < 0 → Expired (red)
+  - Days 0-30 → Due for Renewal (yellow)
+  - Days > 30 → Active (green)
+  - Manual statuses preserved (Renewal in Progress, Renewal Done)
+
+### Action Buttons Overview
+| Button | Icon | Color | Function |
+|--------|------|-------|----------|
+| **Edit** | ✏️ | Blue | Edit certificate details |
+| **Status** | ☑️ | Green | Update certificate status |
+| **Upload** | ⬆️ | Yellow | Upload renewed certificate file |
+| **Renew** | 🔄 | Info Blue | Start renewal process (new status) |
+| **Logs** | 📜 | Gray | View certificate history |
 
 ---
 
@@ -1008,7 +1067,44 @@ const response = await fetch(API_URL, {
     -d '{"CertificateName":"test.com","Environment":"Test",...}'
   ```
 
-### 7. Browser Cache Issues
+### 7. Expired Certificates Showing as "Active" 🆕 FIXED
+
+**Symptom**: Certificates with past expiry dates displaying "Active" status instead of "Expired"
+
+**Root Cause**: Dashboard displayed database status directly without validating against current date. Old certificates had stale "Active" status in database.
+
+**Solution Applied**:
+```javascript
+// Auto-recalculate status based on actual expiry date
+function calculateActualStatus(daysLeft, currentStatus) {
+    // Preserve manual statuses
+    if (['Renewal in Progress', 'Renewal Done'].includes(currentStatus)) {
+        return currentStatus;
+    }
+    
+    // Calculate based on days left
+    if (daysLeft < 0) return 'Expired';
+    if (daysLeft <= 30) return 'Due for Renewal';
+    return 'Active';
+}
+```
+
+**Fix Details**:
+- ✅ Client-side status recalculation on every page load
+- ✅ Overrides stale database values
+- ✅ Preserves manual statuses (Renewal in Progress)
+- ✅ Updates statistics cards with accurate counts
+- ✅ Version: 20251029-1630
+
+**Verification**:
+```
+1. Refresh dashboard (Ctrl+F5)
+2. Check statistics cards show accurate counts
+3. Expired certificates display red "Expired" badge
+4. Days Left shows negative values for expired certs
+```
+
+### 8. Browser Cache Issues
 
 **Symptoms**: Changes not appearing, old errors persisting
 
