@@ -1,0 +1,66 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:eu-west-1:992155623828:*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:eu-west-1:992155623828:table/cert-management-dev-certificates",
+                "arn:aws:dynamodb:eu-west-1:992155623828:table/cert-management-dev-certificates/*",
+                "arn:aws:dynamodb:eu-west-1:992155623828:table/cert-management-dev-certificate-logs",
+                "arn:aws:dynamodb:eu-west-1:992155623828:table/cert-management-dev-certificate-logs/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::cert-management-dev-uploads-a3px89bh",
+                "arn:aws:s3:::cert-management-dev-uploads-a3px89bh/*",
+                "arn:aws:s3:::cert-management-dev-logs-a3px89bh",
+                "arn:aws:s3:::cert-management-dev-logs-a3px89bh/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sns:Publish"
+            ],
+            "Resource": [
+                "arn:aws:sns:eu-west-1:992155623828:cert-renewal-notifications",
+                "arn:aws:sns:eu-west-1:992155623828:certificate-expiry-topic"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Functionality Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #34495e;
+            margin-top: 0;
+        }
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .test-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .result.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stat-box {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-box .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-box .label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        #resultsContainer {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .test-controls {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-controls button {
+            background: #27ae60;
+            margin-right: 10px;
+        }
+        .test-controls button:hover {
+            background: #229954;
+        }
+        .clear-btn {
+            background: #e74c3c !important;
+        }
+        .clear-btn:hover {
+            background: #c0392b !important;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #34495e;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .status-active {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-expiring {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .status-expired {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Certificate Dashboard - Comprehensive Functionality Test</h1>
+    
+    <div class="test-controls">
+        <button class="test-button" onclick="runAllTests()">▶️ Run All Tests</button>
+        <button class="test-button clear-btn" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <!-- Test Results Summary -->
+    <div class="test-section">
+        <h2>📊 Test Summary</h2>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="number" id="totalTests">0</div>
+                <div class="label">Total Tests</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="passedTests" style="color: #27ae60;">0</div>
+                <div class="label">Passed</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="failedTests" style="color: #e74c3c;">0</div>
+                <div class="label">Failed</div>
+            </div>
+            <div class="stat-box">
+                <div class="number" id="warningTests" style="color: #f39c12;">0</div>
+                <div class="label">Warnings</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test 1: API Connectivity -->
+    <div class="test-section">
+        <h2>1️⃣ API Connectivity Test</h2>
+        <button class="test-button" onclick="testAPIConnectivity()">Test API Connection</button>
+        <div id="apiTestResults"></div>
+    </div>
+
+    <!-- Test 2: Data Loading -->
+    <div class="test-section">
+        <h2>2️⃣ Data Loading Test</h2>
+        <button class="test-button" onclick="testDataLoading()">Test Data Load</button>
+        <div id="dataLoadResults"></div>
+    </div>
+
+    <!-- Test 3: Search Functionality -->
+    <div class="test-section">
+        <h2>3️⃣ Search Functionality Test</h2>
+        <button class="test-button" onclick="testSearch()">Test Search</button>
+        <div id="searchResults"></div>
+    </div>
+
+    <!-- Test 4: Filter Functionality -->
+    <div class="test-section">
+        <h2>4️⃣ Filter Functionality Test</h2>
+        <button class="test-button" onclick="testFilters()">Test Filters</button>
+        <div id="filterResults"></div>
+    </div>
+
+    <!-- Test 5: Statistics Calculation -->
+    <div class="test-section">
+        <h2>5️⃣ Statistics Calculation Test</h2>
+        <button class="test-button" onclick="testStatistics()">Test Statistics</button>
+        <div id="statsResults"></div>
+    </div>
+
+    <!-- Test 6: Table Rendering -->
+    <div class="test-section">
+        <h2>6️⃣ Table Rendering Test</h2>
+        <button class="test-button" onclick="testTableRendering()">Test Table</button>
+        <div id="tableResults"></div>
+    </div>
+
+    <!-- Test 7: CORS Configuration -->
+    <div class="test-section">
+        <h2>7️⃣ CORS Configuration Test</h2>
+        <button class="test-button" onclick="testCORS()">Test CORS</button>
+        <div id="corsResults"></div>
+    </div>
+
+    <!-- Test 8: Performance Test -->
+    <div class="test-section">
+        <h2>8️⃣ Performance Test</h2>
+        <button class="test-button" onclick="testPerformance()">Test Performance</button>
+        <div id="performanceResults"></div>
+    </div>
+
+    <!-- All Results -->
+    <div class="test-section">
+        <h2>📋 Detailed Test Results</h2>
+        <div id="resultsContainer"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+        let certificates = [];
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            warnings: 0
+        };
+
+        function log(message, type = 'info', containerId = 'resultsContainer') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(div);
+            
+            // Update counters
+            if (type === 'success') testResults.passed++;
+            else if (type === 'error') testResults.failed++;
+            else if (type === 'warning') testResults.warnings++;
+            testResults.total++;
+            
+            updateSummary();
+        }
+
+        function updateSummary() {
+            document.getElementById('totalTests').textContent = testResults.total;
+            document.getElementById('passedTests').textContent = testResults.passed;
+            document.getElementById('failedTests').textContent = testResults.failed;
+            document.getElementById('warningTests').textContent = testResults.warnings;
+        }
+
+        function clearResults() {
+            document.getElementById('resultsContainer').innerHTML = '';
+            document.getElementById('apiTestResults').innerHTML = '';
+            document.getElementById('dataLoadResults').innerHTML = '';
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('filterResults').innerHTML = '';
+            document.getElementById('statsResults').innerHTML = '';
+            document.getElementById('tableResults').innerHTML = '';
+            document.getElementById('corsResults').innerHTML = '';
+            document.getElementById('performanceResults').innerHTML = '';
+            testResults = { total: 0, passed: 0, failed: 0, warnings: 0 };
+            updateSummary();
+        }
+
+        async function testAPIConnectivity() {
+            log('🔍 Testing API connectivity...', 'info', 'apiTestResults');
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const endTime = performance.now();
+                
+                if (response.ok) {
+                    log(`✅ API Connection: SUCCESS (${response.status})`, 'success', 'apiTestResults');
+                    log(`⏱️ Response Time: ${(endTime - startTime).toFixed(2)}ms`, 'info', 'apiTestResults');
+                    
+                    // Check headers
+                    const corsHeader = response.headers.get('access-control-allow-origin');
+                    if (corsHeader) {
+                        log(`✅ CORS Header Present: ${corsHeader}`, 'success', 'apiTestResults');
+                    } else {
+                        log(`⚠️ CORS Header Missing`, 'warning', 'apiTestResults');
+                    }
+                    
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        log(`✅ Content-Type: ${contentType}`, 'success', 'apiTestResults');
+                    } else {
+                        log(`⚠️ Content-Type: ${contentType}`, 'warning', 'apiTestResults');
+                    }
+                } else {
+                    log(`❌ API Connection Failed: ${response.status} ${response.statusText}`, 'error', 'apiTestResults');
+                }
+            } catch (error) {
+                log(`❌ API Connection Error: ${error.message}`, 'error', 'apiTestResults');
+            }
+        }
+
+        async function testDataLoading() {
+            log('📥 Testing data loading...', 'info', 'dataLoadResults');
+            
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                if (data.certificates) {
+                    certificates = data.certificates;
+                    log(`✅ Data Loaded: ${data.count} certificates`, 'success', 'dataLoadResults');
+                    log(`📊 Timestamp: ${data.timestamp}`, 'info', 'dataLoadResults');
+                    
+                    // Validate data structure
+                    if (certificates.length > 0) {
+                        const sample = certificates[0];
+                        const requiredFields = ['CertificateID', 'CommonName', 'ExpiryDate', 'Status'];
+                        const missingFields = requiredFields.filter(field => !sample[field]);
+                        
+                        if (missingFields.length === 0) {
+                            log(`✅ Data Structure Valid`, 'success', 'dataLoadResults');
+                            log(`📝 Sample Certificate: ${sample.CommonName}`, 'info', 'dataLoadResults');
+                        } else {
+                            log(`❌ Missing Fields: ${missingFields.join(', ')}`, 'error', 'dataLoadResults');
+                        }
+                    }
+                } else {
+                    log(`❌ No certificates data in response`, 'error', 'dataLoadResults');
+                }
+            } catch (error) {
+                log(`❌ Data Load Error: ${error.message}`, 'error', 'dataLoadResults');
+            }
+        }
+
+        async function testSearch() {
+            log('🔍 Testing search functionality...', 'info', 'searchResults');
+            
+            if (certificates.length === 0) {
+                await testDataLoading();
+            }
+            
+            // Test search by common name
+            const searchTerm = 'adfs';
+            const filtered = certificates.filter(cert => 
+                cert.CommonName && cert.CommonName.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            if (filtered.length > 0) {
+                log(`✅ Search for "${searchTerm}": Found ${filtered.length} results`, 'success', 'searchResults');
+                log(`📝 First result: ${filtered[0].CommonName}`, 'info', 'searchResults');
+            } else {
+                log(`⚠️ Search for "${searchTerm}": No results`, 'warning', 'searchResults');
+            }
+            
+            // Test empty search
+            const emptySearch = certificates.filter(cert => 
+                cert.CommonName && cert.CommonName.toLowerCase().includes('')
+            );
+            if (emptySearch.length === certificates.length) {
+                log(`✅ Empty search returns all: ${emptySearch.length} results`, 'success', 'searchResults');
+            } else {
+                log(`❌ Empty search failed`, 'error', 'searchResults');
+            }
+        }
+
+        async function testFilters() {
+            log('🔧 Testing filter functionality...', 'info', 'filterResults');
+            
+            if (certificates.length === 0) {
+                await testDataLoading();
+            }
+            
+            // Test status filter
+            const statuses = [...new Set(certificates.map(c => c.Status))];
+            log(`📊 Available Statuses: ${statuses.join(', ')}`, 'info', 'filterResults');
+            
+            statuses.forEach(status => {
+                const filtered = certificates.filter(c => c.Status === status);
+                log(`✅ Status "${status}": ${filtered.length} certificates`, 'success', 'filterResults');
+            });
+            
+            // Test environment filter
+            const environments = [...new Set(certificates.map(c => c.Environment).filter(e => e))];
+            log(`📊 Available Environments: ${environments.join(', ')}`, 'info', 'filterResults');
+            
+            environments.slice(0, 3).forEach(env => {
+                const filtered = certificates.filter(c => c.Environment === env);
+                log(`✅ Environment "${env}": ${filtered.length} certificates`, 'success', 'filterResults');
+            });
+        }
+
+        async function testStatistics() {
+            log('📊 Testing statistics calculation...', 'info', 'statsResults');
+            
+            if (certificates.length === 0) {
+                await testDataLoading();
+            }
+            
+            const total = certificates.length;
+            const active = certificates.filter(c => c.Status === 'Active').length;
+            const expiring = certificates.filter(c => c.Status === 'Expiring Soon').length;
+            const expired = certificates.filter(c => c.Status === 'Expired').length;
+            
+            log(`✅ Total Certificates: ${total}`, 'success', 'statsResults');
+            log(`✅ Active: ${active}`, 'success', 'statsResults');
+            log(`✅ Expiring Soon: ${expiring}`, expiring > 0 ? 'warning' : 'success', 'statsResults');
+            log(`✅ Expired: ${expired}`, expired > 0 ? 'error' : 'success', 'statsResults');
+            
+            // Verify sum
+            if (active + expiring + expired === total) {
+                log(`✅ Statistics Sum Correct: ${active} + ${expiring} + ${expired} = ${total}`, 'success', 'statsResults');
+            } else {
+                log(`❌ Statistics Sum Incorrect`, 'error', 'statsResults');
+            }
+        }
+
+        async function testTableRendering() {
+            log('📋 Testing table rendering...', 'info', 'tableResults');
+            
+            if (certificates.length === 0) {
+                await testDataLoading();
+            }
+            
+            // Create sample table
+            const sampleSize = Math.min(5, certificates.length);
+            const sampleCerts = certificates.slice(0, sampleSize);
+            
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Common Name</th>
+                            <th>Expiry Date</th>
+                            <th>Days Left</th>
+                            <th>Status</th>
+                            <th>Environment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sampleCerts.forEach(cert => {
+                const statusClass = cert.Status === 'Active' ? 'status-active' : 
+                                   cert.Status === 'Expiring Soon' ? 'status-expiring' : 
+                                   'status-expired';
+                tableHTML += `
+                    <tr>
+                        <td>${cert.CommonName || 'N/A'}</td>
+                        <td>${cert.ExpiryDate || 'N/A'}</td>
+                        <td>${cert.DaysUntilExpiry || 'N/A'}</td>
+                        <td class="${statusClass}">${cert.Status || 'N/A'}</td>
+                        <td>${cert.Environment || 'N/A'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            
+            const tableContainer = document.getElementById('tableResults');
+            tableContainer.innerHTML = tableHTML;
+            
+            log(`✅ Table Rendered: ${sampleSize} sample rows`, 'success', 'tableResults');
+        }
+
+        async function testCORS() {
+            log('🔒 Testing CORS configuration...', 'info', 'corsResults');
+            
+            try {
+                // Test with explicit CORS mode
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    log(`✅ CORS Mode: Request successful`, 'success', 'corsResults');
+                    
+                    // Check CORS headers
+                    const corsOrigin = response.headers.get('access-control-allow-origin');
+                    const corsMethods = response.headers.get('access-control-allow-methods');
+                    const corsHeaders = response.headers.get('access-control-allow-headers');
+                    
+                    if (corsOrigin) {
+                        log(`✅ Access-Control-Allow-Origin: ${corsOrigin}`, 'success', 'corsResults');
+                    }
+                    if (corsMethods) {
+                        log(`✅ Access-Control-Allow-Methods: ${corsMethods}`, 'success', 'corsResults');
+                    }
+                    if (corsHeaders) {
+                        log(`✅ Access-Control-Allow-Headers: ${corsHeaders}`, 'success', 'corsResults');
+                    }
+                    
+                    // Check for duplicate headers
+                    const allHeaders = {};
+                    response.headers.forEach((value, key) => {
+                        if (key.toLowerCase().includes('access-control')) {
+                            allHeaders[key] = value;
+                        }
+                    });
+                    log(`📋 CORS Headers: ${JSON.stringify(allHeaders, null, 2)}`, 'info', 'corsResults');
+                    
+                } else {
+                    log(`❌ CORS Test Failed: ${response.status}`, 'error', 'corsResults');
+                }
+            } catch (error) {
+                log(`❌ CORS Error: ${error.message}`, 'error', 'corsResults');
+            }
+        }
+
+        async function testPerformance() {
+            log('⚡ Testing performance...', 'info', 'performanceResults');
+            
+            const iterations = 3;
+            const times = [];
+            
+            for (let i = 0; i < iterations; i++) {
+                const startTime = performance.now();
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                times.push(duration);
+                log(`🔄 Iteration ${i + 1}: ${duration.toFixed(2)}ms`, 'info', 'performanceResults');
+            }
+            
+            const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+            const minTime = Math.min(...times);
+            const maxTime = Math.max(...times);
+            
+            log(`📊 Average Response Time: ${avgTime.toFixed(2)}ms`, avgTime < 1000 ? 'success' : 'warning', 'performanceResults');
+            log(`⚡ Fastest: ${minTime.toFixed(2)}ms`, 'success', 'performanceResults');
+            log(`🐌 Slowest: ${maxTime.toFixed(2)}ms`, 'info', 'performanceResults');
+            
+            if (avgTime < 500) {
+                log(`✅ Performance: Excellent (< 500ms)`, 'success', 'performanceResults');
+            } else if (avgTime < 1000) {
+                log(`✅ Performance: Good (< 1s)`, 'success', 'performanceResults');
+            } else if (avgTime < 2000) {
+                log(`⚠️ Performance: Acceptable (< 2s)`, 'warning', 'performanceResults');
+            } else {
+                log(`❌ Performance: Slow (> 2s)`, 'error', 'performanceResults');
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            log('🚀 Starting comprehensive dashboard test suite...', 'info');
+            log('', 'info'); // Blank line
+            
+            await testAPIConnectivity();
+            await testDataLoading();
+            await testSearch();
+            await testFilters();
+            await testStatistics();
+            await testTableRendering();
+            await testCORS();
+            await testPerformance();
+            
+            log('', 'info'); // Blank line
+            log(`🎉 Test Suite Complete! Passed: ${testResults.passed}, Failed: ${testResults.failed}, Warnings: ${testResults.warnings}`, 
+                testResults.failed === 0 ? 'success' : 'warning');
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('✅ Test page loaded successfully', 'success');
+            log('📍 API URL: ' + API_URL, 'info');
+            log('👆 Click "Run All Tests" to begin comprehensive testing', 'info');
+        });
+    </script>
+</body>
+</html>

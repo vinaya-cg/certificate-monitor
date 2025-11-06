@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Logic Validation Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .test-case {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .test-case.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-case.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-info {
+            flex: 1;
+        }
+        .test-result {
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .test-result.pass {
+            background: #28a745;
+            color: white;
+        }
+        .test-result.fail {
+            background: #dc3545;
+            color: white;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+            margin: 5px 5px 5px 0;
+        }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-renewal { background: #fff3cd; color: #856404; }
+        .status-progress { background: #d1ecf1; color: #0c5460; }
+        .status-expired { background: #f8d7da; color: #721c24; }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .summary h3 {
+            margin-bottom: 10px;
+        }
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .stat {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .test-details {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Status Logic Validation Test</h1>
+        <p class="subtitle">Testing certificate status calculation logic - October 29, 2025</p>
+
+        <div class="test-section">
+            <h2>Test 1: Days Left Calculation</h2>
+            <div id="daysLeftTests"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 2: Status Calculation (Auto)</h2>
+            <div id="statusCalcTests"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 3: Manual Status Preservation</h2>
+            <div id="manualStatusTests"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 4: Badge Color Mapping</h2>
+            <div id="badgeMappingTests"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Test 5: Edge Cases</h2>
+            <div id="edgeCaseTests"></div>
+        </div>
+
+        <div class="summary" id="summary">
+            <h3>Test Summary</h3>
+            <div class="summary-stats">
+                <div class="stat">
+                    <div class="stat-value" id="totalTests">0</div>
+                    <div class="stat-label">Total Tests</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="passedTests">0</div>
+                    <div class="stat-label">Passed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="failedTests">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="passRate">0%</div>
+                    <div class="stat-label">Pass Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Copy the functions from dashboard.js
+        function calculateDaysLeft(expiryDate) {
+            if (!expiryDate) return null;
+            
+            const expiry = new Date(expiryDate);
+            const today = new Date();
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return diffDays;
+        }
+
+        function calculateActualStatus(daysLeft, currentStatus) {
+            if (daysLeft === null || daysLeft === undefined) {
+                return currentStatus || 'Unknown';
+            }
+            
+            const manualStatuses = ['Renewal in Progress', 'Renewal Done'];
+            if (manualStatuses.includes(currentStatus)) {
+                return currentStatus;
+            }
+            
+            if (daysLeft < 0) {
+                return 'Expired';
+            } else if (daysLeft <= 30) {
+                return 'Due for Renewal';
+            } else {
+                return 'Active';
+            }
+        }
+
+        function createStatusBadge(status) {
+            const statusClass = status.toLowerCase().replace(/\s+/g, '-');
+            const badgeClass = `status-${statusClass === 'due-for-renewal' ? 'renewal' : 
+                              statusClass === 'renewal-in-progress' || statusClass === 'renewal-done' ? 'progress' : 
+                              statusClass === 'expired' ? 'expired' : 'active'}`;
+            
+            return `<span class="status-badge ${badgeClass}">${status}</span>`;
+        }
+
+        // Test results storage
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+
+        function runTest(name, actual, expected, details = '') {
+            testResults.total++;
+            const passed = JSON.stringify(actual) === JSON.stringify(expected);
+            if (passed) {
+                testResults.passed++;
+            } else {
+                testResults.failed++;
+            }
+
+            return {
+                name,
+                passed,
+                actual,
+                expected,
+                details
+            };
+        }
+
+        function displayTest(test, containerId) {
+            const container = document.getElementById(containerId);
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-case ${test.passed ? 'pass' : 'fail'}`;
+            
+            testDiv.innerHTML = `
+                <div class="test-info">
+                    <strong>${test.name}</strong>
+                    ${test.details ? `<div class="test-details">${test.details}</div>` : ''}
+                    <div class="test-details">
+                        Expected: <code>${JSON.stringify(test.expected)}</code> | 
+                        Actual: <code>${JSON.stringify(test.actual)}</code>
+                    </div>
+                </div>
+                <div class="test-result ${test.passed ? 'pass' : 'fail'}">
+                    ${test.passed ? '✓ PASS' : '✗ FAIL'}
+                </div>
+            `;
+            
+            container.appendChild(testDiv);
+        }
+
+        // Run all tests
+        function runAllTests() {
+            const today = new Date();
+            
+            // Test 1: Days Left Calculation
+            console.log('Test 1: Days Left Calculation');
+            
+            const futureDate60 = new Date(today);
+            futureDate60.setDate(today.getDate() + 60);
+            displayTest(
+                runTest('60 days in future', calculateDaysLeft(futureDate60.toISOString()), 60, 'Certificate expiring in 60 days'),
+                'daysLeftTests'
+            );
+            
+            const futureDate15 = new Date(today);
+            futureDate15.setDate(today.getDate() + 15);
+            displayTest(
+                runTest('15 days in future', calculateDaysLeft(futureDate15.toISOString()), 15, 'Certificate expiring in 15 days'),
+                'daysLeftTests'
+            );
+            
+            const pastDate30 = new Date(today);
+            pastDate30.setDate(today.getDate() - 30);
+            const result = calculateDaysLeft(pastDate30.toISOString());
+            displayTest(
+                runTest('30 days in past', result <= -29 && result >= -31, true, 'Certificate expired 30 days ago'),
+                'daysLeftTests'
+            );
+            
+            displayTest(
+                runTest('Null date handling', calculateDaysLeft(null), null, 'Should return null for invalid date'),
+                'daysLeftTests'
+            );
+
+            // Test 2: Status Calculation (Auto)
+            console.log('Test 2: Status Calculation');
+            
+            displayTest(
+                runTest('Active status (60 days)', calculateActualStatus(60, 'Active'), 'Active', '60 days left → Active'),
+                'statusCalcTests'
+            );
+            
+            displayTest(
+                runTest('Due for Renewal (30 days)', calculateActualStatus(30, 'Active'), 'Due for Renewal', '30 days left → Due for Renewal'),
+                'statusCalcTests'
+            );
+            
+            displayTest(
+                runTest('Due for Renewal (15 days)', calculateActualStatus(15, 'Active'), 'Due for Renewal', '15 days left → Due for Renewal'),
+                'statusCalcTests'
+            );
+            
+            displayTest(
+                runTest('Due for Renewal (1 day)', calculateActualStatus(1, 'Active'), 'Due for Renewal', '1 day left → Due for Renewal'),
+                'statusCalcTests'
+            );
+            
+            displayTest(
+                runTest('Expired (-1 days)', calculateActualStatus(-1, 'Active'), 'Expired', 'Expired 1 day ago → Expired'),
+                'statusCalcTests'
+            );
+            
+            displayTest(
+                runTest('Expired (-30 days)', calculateActualStatus(-30, 'Active'), 'Expired', 'Expired 30 days ago → Expired'),
+                'statusCalcTests'
+            );
+
+            // Test 3: Manual Status Preservation
+            console.log('Test 3: Manual Status Preservation');
+            
+            displayTest(
+                runTest('Preserve "Renewal in Progress"', calculateActualStatus(-10, 'Renewal in Progress'), 'Renewal in Progress', 'Manual status preserved even if expired'),
+                'manualStatusTests'
+            );
+            
+            displayTest(
+                runTest('Preserve "Renewal Done"', calculateActualStatus(-5, 'Renewal Done'), 'Renewal Done', 'Manual status preserved'),
+                'manualStatusTests'
+            );
+            
+            displayTest(
+                runTest('Override stale "Active"', calculateActualStatus(-10, 'Active'), 'Expired', 'Stale Active status overridden to Expired'),
+                'manualStatusTests'
+            );
+
+            // Test 4: Badge Color Mapping
+            console.log('Test 4: Badge Color Mapping');
+            
+            const activeBadge = createStatusBadge('Active');
+            displayTest(
+                runTest('Active badge color', activeBadge.includes('status-active'), true, 'Active → Green badge'),
+                'badgeMappingTests'
+            );
+            
+            const renewalBadge = createStatusBadge('Due for Renewal');
+            displayTest(
+                runTest('Renewal badge color', renewalBadge.includes('status-renewal'), true, 'Due for Renewal → Yellow badge'),
+                'badgeMappingTests'
+            );
+            
+            const expiredBadge = createStatusBadge('Expired');
+            displayTest(
+                runTest('Expired badge color', expiredBadge.includes('status-expired'), true, 'Expired → Red badge'),
+                'badgeMappingTests'
+            );
+            
+            const progressBadge = createStatusBadge('Renewal in Progress');
+            displayTest(
+                runTest('Progress badge color', progressBadge.includes('status-progress'), true, 'Renewal in Progress → Blue badge'),
+                'badgeMappingTests'
+            );
+
+            // Test 5: Edge Cases
+            console.log('Test 5: Edge Cases');
+            
+            displayTest(
+                runTest('Exactly 0 days (today)', calculateActualStatus(0, 'Active'), 'Due for Renewal', 'Expires today → Due for Renewal'),
+                'edgeCaseTests'
+            );
+            
+            displayTest(
+                runTest('Exactly 31 days', calculateActualStatus(31, 'Active'), 'Active', '31 days left → Active'),
+                'edgeCaseTests'
+            );
+            
+            displayTest(
+                runTest('Null days with status', calculateActualStatus(null, 'Active'), 'Active', 'Null days → Preserve current status'),
+                'edgeCaseTests'
+            );
+            
+            displayTest(
+                runTest('Undefined days', calculateActualStatus(undefined, null), 'Unknown', 'Undefined days → Unknown'),
+                'edgeCaseTests'
+            );
+
+            // Update summary
+            updateSummary();
+        }
+
+        function updateSummary() {
+            document.getElementById('totalTests').textContent = testResults.total;
+            document.getElementById('passedTests').textContent = testResults.passed;
+            document.getElementById('failedTests').textContent = testResults.failed;
+            
+            const passRate = testResults.total > 0 
+                ? Math.round((testResults.passed / testResults.total) * 100) 
+                : 0;
+            document.getElementById('passRate').textContent = passRate + '%';
+
+            // Color code the summary
+            const summary = document.getElementById('summary');
+            if (passRate === 100) {
+                summary.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            } else if (passRate >= 80) {
+                summary.style.background = 'linear-gradient(135deg, #ffc107 0%, #ff9800 100%)';
+            } else {
+                summary.style.background = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)';
+            }
+        }
+
+        // Run tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            runAllTests();
+            console.log('All tests completed!', testResults);
+        });
+    </script>
+</body>
+</html>
