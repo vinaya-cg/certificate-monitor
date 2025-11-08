@@ -100,7 +100,8 @@ resource "aws_s3_bucket_policy" "dashboard" {
 
 # S3 bucket for certificate uploads
 resource "aws_s3_bucket" "uploads" {
-  bucket = "${local.common_name}-uploads-${local.bucket_suffix}"
+  bucket        = "${local.common_name}-uploads-${local.bucket_suffix}"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "uploads" {

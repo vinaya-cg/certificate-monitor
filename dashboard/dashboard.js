@@ -1,6 +1,6 @@
 // Certificate Management Dashboard - JavaScript
 // API Configuration
-const API_URL = 'https://rwqmbee3uvlzkogzhxiwg3fvzi0dmgmx.lambda-url.eu-west-1.on.aws/';
+const API_URL = 'https://qnx2mwpyvb6o6lpt35bez3lywi0inesp.lambda-url.eu-west-1.on.aws/';
 
 // Configuration (these will be populated from environment variables)
 let API_CONFIG = {

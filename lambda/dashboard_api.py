@@ -1,8 +1,12 @@
 import json
 import boto3
 import uuid
+import os
 from decimal import Decimal
 from datetime import datetime, date
+
+# Get table names from environment variables
+CERTIFICATES_TABLE = os.environ.get('CERTIFICATES_TABLE', 'cert-management-dev-certificates')
 
 def lambda_handler(event, context):
     """
@@ -19,8 +23,8 @@ def lambda_handler(event, context):
     
     # Initialize DynamoDB
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('cert-management-dev-certificates')
-    logs_table = dynamodb.Table('cert-management-dev-certificate-logs')
+    table = dynamodb.Table(CERTIFICATES_TABLE)
+    logs_table = dynamodb.Table(f"{CERTIFICATES_TABLE.rsplit('-', 1)[0]}-certificate-logs")
     
     # Get HTTP method
     http_method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
