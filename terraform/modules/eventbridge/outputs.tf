@@ -1,0 +1,11 @@
+# EventBridge Module - Outputs
+
+output "event_rule_arn" {
+  description = "ARN of the EventBridge rule"
+  value       = aws_cloudwatch_event_rule.daily_monitor.arn
+}
+
+output "event_rule_name" {
+  description = "Name of the EventBridge rule"
+  value       = aws_cloudwatch_event_rule.daily_monitor.name
+}
