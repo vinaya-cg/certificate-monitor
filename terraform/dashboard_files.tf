@@ -43,14 +43,20 @@ resource "aws_s3_object" "dashboard_js" {
   key          = "dashboard.js"
   content_type = "application/javascript"
   
-  # Read the file and replace the API_URL with the actual Lambda Function URL
+  # Read the file and replace the placeholder with the actual Lambda Function URL
   content = replace(
     file("${path.module}/../dashboard/dashboard.js"),
-    "const API_URL = 'https://qnx2mwpyvb6o6lpt35bez3lywi0inesp.lambda-url.eu-west-1.on.aws/';",
-    "const API_URL = '${aws_lambda_function_url.dashboard_api_url.function_url}';"
+    "$${LAMBDA_FUNCTION_URL}",
+    aws_lambda_function_url.dashboard_api_url.function_url
   )
   
-  # Update when Lambda URL changes
+  # Force update when Lambda URL changes
+  etag = md5(replace(
+    file("${path.module}/../dashboard/dashboard.js"),
+    "$${LAMBDA_FUNCTION_URL}",
+    aws_lambda_function_url.dashboard_api_url.function_url
+  ))
+  
   depends_on = [
     aws_lambda_function_url.dashboard_api_url
   ]

@@ -1,6 +1,7 @@
 // Certificate Management Dashboard - JavaScript
 // API Configuration
-const API_URL = 'https://qnx2mwpyvb6o6lpt35bez3lywi0inesp.lambda-url.eu-west-1.on.aws/';
+// This URL will be replaced during Terraform deployment
+const API_URL = '${LAMBDA_FUNCTION_URL}';
 
 // Configuration (these will be populated from environment variables)
 let API_CONFIG = {
