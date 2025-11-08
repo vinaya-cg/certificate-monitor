@@ -17,7 +17,10 @@ venv/
 ENV/
 *.egg-info/
 dist/
+
+# Build artifacts
 build/
+*.zip
 
 # Lambda deployment packages
 lambda/*.zip
