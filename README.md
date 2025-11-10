@@ -34,13 +34,22 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 
 - **Web Dashboard**: Secure, authenticated interface for certificate management
 - **ACM Synchronization**: Automated sync from AWS Certificate Manager with manual trigger option
+- **ServiceNow Integration**: Bidirectional integration for automated ticketing and status updates
 - **Automated Monitoring**: Daily checks for expiring certificates with email notifications
 - **Excel Import**: Bulk certificate upload via Excel files
 - **REST API**: Full CRUD operations with JWT authentication
 - **Role-Based Access Control**: Admin, Operator, and Viewer roles
 - **Infrastructure as Code**: 100% Terraform-managed AWS resources
 
-### Latest Features (v1.2.0)
+### Latest Features (v1.3.0)
+- 🎫 **ServiceNow Ticket Creation**: Automated incident creation for expiring certificates (Production)
+- 🔄 **Webhook Integration**: Real-time certificate updates when engineers pick ServiceNow incidents (Ready)
+- ⚡ **Priority-Based Assignment**: Intelligent ticket prioritization (1-5 scale) based on expiry urgency
+- 🛡️ **Duplicate Prevention**: Smart detection prevents duplicate ticket creation
+- 📝 **Assignment Tracking**: Auto-update certificates with engineer details when incidents are assigned
+- 🔁 **Status Synchronization**: Bidirectional sync between AWS and ServiceNow
+
+### Features (v1.2.0)
 - 🔄 **ACM Certificate Sync**: One-click sync from AWS Certificate Manager
 - 📊 **Real-time Progress Modal**: Visual feedback with certificate counts
 - ⏰ **Scheduled Daily Sync**: Automated sync at 2 AM UTC via EventBridge
@@ -102,6 +111,9 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 4. **Business Logic Layer**: Lambda functions (Python 3.9)
 5. **Data Layer**: DynamoDB (certificates, logs)
 6. **Monitoring Layer**: EventBridge (scheduled triggers), CloudWatch (metrics/logs)
+7. **ServiceNow Integration**: 
+   - **Outbound (AWS → ServiceNow)**: Automated ticket creation for expiring certificates
+   - **Inbound (ServiceNow → AWS)**: Webhook handler for incident assignment updates
 
 ## Features
 
@@ -132,7 +144,25 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 - **Expiry Notifications**: Email alerts via SES for certificates expiring within threshold
 - **CloudWatch Dashboard**: Real-time metrics for Lambda performance, DynamoDB capacity
 
-### 🌐 User Interface
+### � ServiceNow Integration
+- **Automated Ticket Creation**: Daily scan creates incidents for expiring certificates (within 30 days)
+- **Priority-Based Assignment**: 
+  - Priority 1 (Critical): Expired certificates
+  - Priority 2 (High): <7 days to expiry
+  - Priority 3 (Medium): 7-14 days to expiry
+  - Priority 4 (Low): 15-30 days to expiry
+- **Duplicate Prevention**: Smart detection prevents creating multiple tickets for same certificate
+- **Webhook Integration** (Optional - Disabled by default):
+  - Receives incident assignment updates from ServiceNow
+  - Auto-updates certificate with engineer details when ticket is picked
+  - Changes status to "Renewal in Progress" when incident assigned
+  - Tracks assignment timestamps and incident states
+  - Complete bidirectional synchronization
+- **OAuth2 Authentication**: Secure integration with ServiceNow REST API
+- **Feature Flags**: Enable/disable integration without code changes
+- **See**: `SERVICENOW_DEPLOYMENT_GUIDE.md` and `SERVICENOW_WEBHOOK_INTEGRATION.md` for details
+
+### �🌐 User Interface
 - **Responsive Design**: Works on desktop, tablet, mobile devices
 - **Real-time Validation**: Password strength indicators, form input validation
 - **Advanced Filtering**:
@@ -179,6 +209,10 @@ sender_email = "your-email@example.com"  # Must be verified in SES
 admin_user    = "admin@example.com"
 operator_user = "operator@example.com"
 viewer_user   = "viewer@example.com"
+
+# ServiceNow Integration (Optional)
+enable_servicenow_integration = false  # Set to true to enable ticket creation
+enable_servicenow_webhook     = false  # Set to true to enable bidirectional sync
 ```
 
 ### Step 3: Deploy Infrastructure
@@ -283,6 +317,7 @@ cert-dashboard/
         ├── eventbridge/            # Scheduled monitoring
         ├── iam/                    # Lambda execution roles
         ├── lambda_secure/          # Lambda functions
+        ├── lambda_servicenow_webhook/  # ServiceNow webhook handler
         ├── monitoring/             # CloudWatch dashboard
         └── storage_secure/         # S3 buckets with encryption
 ```
@@ -299,6 +334,10 @@ Comprehensive documentation is organized as follows:
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - REST API reference
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 
+### ServiceNow Integration Documentation
+- **[SERVICENOW_WEBHOOK_INTEGRATION.md](SERVICENOW_WEBHOOK_INTEGRATION.md)** - Complete webhook setup guide
+- **[WEBHOOK_DEPLOYMENT_STATUS.md](WEBHOOK_DEPLOYMENT_STATUS.md)** - Deployment status and instructions
+
 ### Module Documentation
 Each Terraform module has its own README:
 
@@ -310,6 +349,7 @@ Each Terraform module has its own README:
 - [modules/eventbridge/README.md](terraform/modules/eventbridge/README.md)
 - [modules/iam/README.md](terraform/modules/iam/README.md)
 - [modules/lambda_secure/README.md](terraform/modules/lambda_secure/README.md)
+- [modules/lambda_servicenow_webhook/README.md](terraform/modules/lambda_servicenow_webhook/README.md)
 - [modules/monitoring/README.md](terraform/modules/monitoring/README.md)
 - [modules/storage_secure/README.md](terraform/modules/storage_secure/README.md)
 
