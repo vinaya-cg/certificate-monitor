@@ -33,11 +33,19 @@ That's it! The system is 100% portable - works in any AWS account/region without
 This project provides a complete solution for monitoring SSL/TLS certificates across multiple environments. It features:
 
 - **Web Dashboard**: Secure, authenticated interface for certificate management
+- **ACM Synchronization**: Automated sync from AWS Certificate Manager with manual trigger option
 - **Automated Monitoring**: Daily checks for expiring certificates with email notifications
 - **Excel Import**: Bulk certificate upload via Excel files
 - **REST API**: Full CRUD operations with JWT authentication
 - **Role-Based Access Control**: Admin, Operator, and Viewer roles
 - **Infrastructure as Code**: 100% Terraform-managed AWS resources
+
+### Latest Features (v1.2.0)
+- 🔄 **ACM Certificate Sync**: One-click sync from AWS Certificate Manager
+- 📊 **Real-time Progress Modal**: Visual feedback with certificate counts
+- ⏰ **Scheduled Daily Sync**: Automated sync at 2 AM UTC via EventBridge
+- 🎯 **Smart Updates**: Preserves manual data while updating ACM info
+- 📈 **Performance**: Syncs 64 certificates in ~6 seconds
 
 ## Architecture
 

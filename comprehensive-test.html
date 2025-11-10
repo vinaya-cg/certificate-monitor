@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete System Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6/dist/amazon-cognito-identity.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 { color: #4ec9b0; }
+        .test-section {
+            background: #252526;
+            border-left: 3px solid #007acc;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .success { border-left-color: #4ec9b0; }
+        .error { border-left-color: #f48771; }
+        .warning { border-left-color: #dcdcaa; }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .cert-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .cert-table th,
+        .cert-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .cert-table th {
+            background: #007acc;
+            color: white;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Complete Certificate Dashboard System Test</h1>
+    
+    <button onclick="runAllTests()">▶️ Run All Tests</button>
+    <button onclick="location.reload()">🔄 Refresh Page</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function log(title, content, type = 'info') {
+            const section = document.createElement('div');
+            section.className = `test-section ${type}`;
+            section.innerHTML = `<h3>${title}</h3>${content}`;
+            resultsDiv.appendChild(section);
+        }
+        
+        function logPre(title, data, type = 'info') {
+            log(title, `<pre>${JSON.stringify(data, null, 2)}</pre>`, type);
+        }
+        
+        async function runAllTests() {
+            resultsDiv.innerHTML = '<div class="test-section">⏳ Running tests...</div>';
+            
+            try {
+                // Test 1: Check Configuration
+                await testConfiguration();
+                
+                // Test 2: Test Authentication
+                const session = await testAuthentication();
+                
+                if (session) {
+                    // Test 3: Test API Call
+                    await testAPICall(session);
+                }
+                
+            } catch (error) {
+                log('❌ Fatal Error', `<pre>${error.message}\n${error.stack}</pre>`, 'error');
+            }
+        }
+        
+        async function testConfiguration() {
+            log('📋 Step 1: Configuration Check', 'Checking system configuration...', 'info');
+            
+            const config = {
+                cognito: {
+                    userPoolId: 'eu-west-1_cWIxi5SPd',
+                    clientId: '1dq9f0m4fil3fiqcpk0h575kb1',
+                    region: 'eu-west-1'
+                },
+                api: {
+                    url: 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure/certificates',
+                    method: 'GET'
+                },
+                credentials: {
+                    username: 'vinaya-c.nayanegali@capgemini.com',
+                    password: 'Admin@123'
+                }
+            };
+            
+            logPre('✅ Configuration Loaded', config, 'success');
+            return config;
+        }
+        
+        async function testAuthentication() {
+            log('🔐 Step 2: Authentication Test', 'Attempting to authenticate with Cognito...', 'info');
+            
+            return new Promise((resolve, reject) => {
+                const poolData = {
+                    UserPoolId: 'eu-west-1_cWIxi5SPd',
+                    ClientId: '1dq9f0m4fil3fiqcpk0h575kb1'
+                };
+                
+                const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+                
+                const authenticationData = {
+                    Username: 'vinaya-c.nayanegali@capgemini.com',
+                    Password: 'Admin@123',
+                };
+                
+                const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+                
+                const userData = {
+                    Username: 'vinaya-c.nayanegali@capgemini.com',
+                    Pool: userPool
+                };
+                
+                const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+                
+                cognitoUser.authenticateUser(authenticationDetails, {
+                    onSuccess: function (session) {
+                        const idToken = session.getIdToken().getJwtToken();
+                        const payload = session.getIdToken().payload;
+                        
+                        log('✅ Authentication Successful', `
+                            <p>User: ${payload.email || payload['cognito:username']}</p>
+                            <p>Groups: ${payload['cognito:groups'] || 'None'}</p>
+                            <p>Token length: ${idToken.length} characters</p>
+                            <p>Expires: ${new Date(payload.exp * 1000).toLocaleString()}</p>
+                        `, 'success');
+                        
+                        resolve(session);
+                    },
+                    
+                    onFailure: function(err) {
+                        log('❌ Authentication Failed', `<pre>${JSON.stringify(err, null, 2)}</pre>`, 'error');
+                        resolve(null);
+                    },
+                    
+                    newPasswordRequired: function(userAttributes, requiredAttributes) {
+                        log('⚠️ New Password Required', 'User needs to set a new password', 'warning');
+                        resolve(null);
+                    }
+                });
+            });
+        }
+        
+        async function testAPICall(session) {
+            log('🌐 Step 3: API Call Test', 'Calling API with authentication token...', 'info');
+            
+            const idToken = session.getIdToken().getJwtToken();
+            const apiUrl = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure/certificates';
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log('📡 API Response Received', `
+                    <p>Status: ${response.status} ${response.statusText}</p>
+                    <p>URL: ${apiUrl}</p>
+                    <p>Headers:</p>
+                    <pre>${JSON.stringify(Object.fromEntries(response.headers), null, 2)}</pre>
+                `, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    log('✅ API Data Received', `
+                        <p><strong>Certificate Count: ${data.count || 0}</strong></p>
+                        <p>Timestamp: ${data.timestamp || 'N/A'}</p>
+                    `, 'success');
+                    
+                    if (data.certificates && data.certificates.length > 0) {
+                        displayCertificates(data.certificates);
+                    } else {
+                        log('⚠️ No Certificates', 'API returned 0 certificates', 'warning');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log('❌ API Error Response', `<pre>${errorText}</pre>`, 'error');
+                }
+                
+            } catch (error) {
+                log('❌ API Call Failed', `
+                    <p>Error: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `, 'error');
+            }
+        }
+        
+        function displayCertificates(certificates) {
+            let html = '<table class="cert-table"><thead><tr>';
+            html += '<th>#</th><th>CommonName</th><th>Environment</th><th>Status</th><th>Expiry Date</th><th>Owner</th>';
+            html += '</tr></thead><tbody>';
+            
+            certificates.slice(0, 10).forEach((cert, index) => {
+                html += `<tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${cert.CommonName || cert.CertificateName || 'N/A'}</strong></td>
+                    <td>${cert.Environment || 'N/A'}</td>
+                    <td>${cert.Status || 'N/A'}</td>
+                    <td>${cert.ExpiryDate || 'N/A'}</td>
+                    <td>${cert.OwnerEmail || 'N/A'}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            
+            if (certificates.length > 10) {
+                html += `<p><em>Showing first 10 of ${certificates.length} certificates</em></p>`;
+            }
+            
+            log(`✅ Certificates Displayed (${certificates.length} total)`, html, 'success');
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>

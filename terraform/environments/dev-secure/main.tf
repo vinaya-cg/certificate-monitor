@@ -169,9 +169,10 @@ module "lambda_secure" {
   aws_region                 = data.aws_region.current.name
   lambda_source_path         = "${path.module}/../../../lambda"
   api_gateway_execution_arn  = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*/*/*"
+  acm_sync_function_name     = module.acm_sync.lambda_function_name
   common_tags                = local.common_tags
 
-  depends_on = [module.iam]
+  depends_on = [module.iam, module.acm_sync]
 }
 
 # ===================================================================

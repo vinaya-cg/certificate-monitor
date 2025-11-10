@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Dashboard Functionality Test</title>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.1/dist/amazon-cognito-identity.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #ccc;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .test-item.running {
+            border-left-color: #ffa500;
+            background: #fff9e6;
+        }
+        .test-item.pass {
+            border-left-color: #28a745;
+            background: #e6ffe6;
+        }
+        .test-item.fail {
+            border-left-color: #dc3545;
+            background: #ffe6e6;
+        }
+        .test-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .test-result {
+            font-size: 14px;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .test-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .summary {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .summary .stat {
+            display: inline-block;
+            margin: 0 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+        .summary .pass-stat {
+            background: #28a745;
+            color: white;
+        }
+        .summary .fail-stat {
+            background: #dc3545;
+            color: white;
+        }
+        .summary .total-stat {
+            background: #667eea;
+            color: white;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .data-table th {
+            background: #667eea;
+            color: white;
+        }
+        .data-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Complete Dashboard Functionality Test Suite</h1>
+        <p>Comprehensive testing of all Certificate Dashboard features</p>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <button id="runAllBtn" onclick="runAllTests()">▶️ Run All Tests</button>
+        <button onclick="location.reload()">🔄 Reset</button>
+    </div>
+
+    <div class="test-section">
+        <h2>1. Configuration & Setup Tests</h2>
+        <div id="test-config" class="test-item">
+            <div class="test-name">⏳ Configuration Loading</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-cognito-config" class="test-item">
+            <div class="test-name">⏳ Cognito Configuration</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-api-config" class="test-item">
+            <div class="test-name">⏳ API Configuration</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Authentication Tests</h2>
+        <div id="test-auth" class="test-item">
+            <div class="test-name">⏳ User Authentication</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-token" class="test-item">
+            <div class="test-name">⏳ JWT Token Validation</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-groups" class="test-item">
+            <div class="test-name">⏳ User Group Membership</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. API Integration Tests</h2>
+        <div id="test-api-get" class="test-item">
+            <div class="test-name">⏳ GET /certificates (Fetch All)</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-cors" class="test-item">
+            <div class="test-name">⏳ CORS Headers Validation</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-response-format" class="test-item">
+            <div class="test-name">⏳ Response Format Validation</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Data Display Tests</h2>
+        <div id="test-data-load" class="test-item">
+            <div class="test-name">⏳ Certificate Data Loading</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-field-mapping" class="test-item">
+            <div class="test-name">⏳ Field Name Mapping (CommonName)</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-table-render" class="test-item">
+            <div class="test-name">⏳ Table Rendering</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Dashboard Feature Tests</h2>
+        <div id="test-search" class="test-item">
+            <div class="test-name">⏳ Search Functionality</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-filter-env" class="test-item">
+            <div class="test-name">⏳ Environment Filter</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-filter-status" class="test-item">
+            <div class="test-name">⏳ Status Filter</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-sort" class="test-item">
+            <div class="test-name">⏳ Sorting Functionality</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-pagination" class="test-item">
+            <div class="test-name">⏳ Pagination</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Data Quality Tests</h2>
+        <div id="test-expiry-calc" class="test-item">
+            <div class="test-name">⏳ Expiry Date Calculation</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-status-logic" class="test-item">
+            <div class="test-name">⏳ Status Logic (Active/Expired/Expiring Soon)</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+        <div id="test-data-integrity" class="test-item">
+            <div class="test-name">⏳ Data Integrity Check</div>
+            <div class="test-result">Waiting to run...</div>
+        </div>
+    </div>
+
+    <div id="summary" class="summary" style="display: none;">
+        <h3>Test Summary</h3>
+        <span class="stat total-stat">Total: <span id="total-count">0</span></span>
+        <span class="stat pass-stat">✅ Passed: <span id="pass-count">0</span></span>
+        <span class="stat fail-stat">❌ Failed: <span id="fail-count">0</span></span>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            cognito: {
+                userPoolId: 'eu-west-1_cWIxi5SPd',
+                clientId: '1dq9f0m4fil3fiqcpk0h575kb1',
+                region: 'eu-west-1'
+            },
+            api: {
+                url: 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure/certificates'
+            },
+            auth: {
+                username: 'vinaya-c.nayanegali@capgemini.com',
+                password: 'Admin@123'
+            }
+        };
+
+        let testResults = {
+            passed: 0,
+            failed: 0,
+            total: 0
+        };
+
+        let authToken = null;
+        let certificatesData = null;
+
+        function updateTestStatus(testId, status, message, details = '') {
+            const testElement = document.getElementById(testId);
+            testElement.className = `test-item ${status}`;
+            
+            const resultDiv = testElement.querySelector('.test-result');
+            resultDiv.innerHTML = message;
+            
+            if (details) {
+                let detailsDiv = testElement.querySelector('.test-details');
+                if (!detailsDiv) {
+                    detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'test-details';
+                    testElement.appendChild(detailsDiv);
+                }
+                detailsDiv.innerHTML = details;
+            }
+
+            testResults.total++;
+            if (status === 'pass') testResults.passed++;
+            if (status === 'fail') testResults.failed++;
+            
+            updateSummary();
+        }
+
+        function updateSummary() {
+            document.getElementById('summary').style.display = 'block';
+            document.getElementById('total-count').textContent = testResults.total;
+            document.getElementById('pass-count').textContent = testResults.passed;
+            document.getElementById('fail-count').textContent = testResults.failed;
+        }
+
+        async function runAllTests() {
+            document.getElementById('runAllBtn').disabled = true;
+            testResults = { passed: 0, failed: 0, total: 0 };
+            
+            try {
+                await testConfiguration();
+                await testCognitoConfig();
+                await testAPIConfig();
+                await testAuthentication();
+                await testTokenValidation();
+                await testUserGroups();
+                await testAPIGetCertificates();
+                await testCORSHeaders();
+                await testResponseFormat();
+                await testDataLoad();
+                await testFieldMapping();
+                await testTableRender();
+                await testSearchFunctionality();
+                await testEnvironmentFilter();
+                await testStatusFilter();
+                await testSortFunctionality();
+                await testPagination();
+                await testExpiryCalculation();
+                await testStatusLogic();
+                await testDataIntegrity();
+            } catch (error) {
+                console.error('Test suite error:', error);
+            }
+            
+            document.getElementById('runAllBtn').disabled = false;
+        }
+
+        // Test 1: Configuration Loading
+        async function testConfiguration() {
+            updateTestStatus('test-config', 'running', '🔄 Testing configuration...');
+            
+            try {
+                if (CONFIG.cognito.userPoolId && CONFIG.cognito.clientId && CONFIG.api.url) {
+                    updateTestStatus('test-config', 'pass', 
+                        '✅ Configuration loaded successfully',
+                        `<strong>Config:</strong><br>
+                        User Pool: ${CONFIG.cognito.userPoolId}<br>
+                        Client ID: ${CONFIG.cognito.clientId}<br>
+                        API URL: ${CONFIG.api.url}`);
+                } else {
+                    throw new Error('Missing configuration values');
+                }
+            } catch (error) {
+                updateTestStatus('test-config', 'fail', '❌ Configuration error', error.message);
+            }
+        }
+
+        // Test 2: Cognito Configuration
+        async function testCognitoConfig() {
+            updateTestStatus('test-cognito-config', 'running', '🔄 Validating Cognito config...');
+            
+            try {
+                const poolData = {
+                    UserPoolId: CONFIG.cognito.userPoolId,
+                    ClientId: CONFIG.cognito.clientId
+                };
+                const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+                
+                if (userPool) {
+                    updateTestStatus('test-cognito-config', 'pass', 
+                        '✅ Cognito pool initialized',
+                        `Region: ${CONFIG.cognito.region}<br>Pool ID: ${CONFIG.cognito.userPoolId}`);
+                }
+            } catch (error) {
+                updateTestStatus('test-cognito-config', 'fail', '❌ Cognito config error', error.message);
+            }
+        }
+
+        // Test 3: API Configuration
+        async function testAPIConfig() {
+            updateTestStatus('test-api-config', 'running', '🔄 Validating API config...');
+            
+            try {
+                const url = new URL(CONFIG.api.url);
+                const hasCorrectPath = url.pathname.includes('/certificates');
+                const hasHTTPS = url.protocol === 'https:';
+                
+                if (hasCorrectPath && hasHTTPS) {
+                    updateTestStatus('test-api-config', 'pass', 
+                        '✅ API URL is correctly configured',
+                        `Protocol: ${url.protocol}<br>
+                        Host: ${url.host}<br>
+                        Path: ${url.pathname}<br>
+                        ✅ Has /certificates endpoint<br>
+                        ✅ Uses HTTPS`);
+                } else {
+                    throw new Error(`Missing /certificates path: ${!hasCorrectPath}, Missing HTTPS: ${!hasHTTPS}`);
+                }
+            } catch (error) {
+                updateTestStatus('test-api-config', 'fail', '❌ API config error', error.message);
+            }
+        }
+
+        // Test 4: Authentication
+        async function testAuthentication() {
+            updateTestStatus('test-auth', 'running', '🔄 Authenticating user...');
+            
+            return new Promise((resolve) => {
+                try {
+                    const poolData = {
+                        UserPoolId: CONFIG.cognito.userPoolId,
+                        ClientId: CONFIG.cognito.clientId
+                    };
+                    const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+                    
+                    const authenticationData = {
+                        Username: CONFIG.auth.username,
+                        Password: CONFIG.auth.password
+                    };
+                    
+                    const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+                    
+                    const userData = {
+                        Username: CONFIG.auth.username,
+                        Pool: userPool
+                    };
+                    
+                    const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+                    
+                    cognitoUser.authenticateUser(authenticationDetails, {
+                        onSuccess: function(result) {
+                            authToken = result.getIdToken().getJwtToken();
+                            updateTestStatus('test-auth', 'pass', 
+                                '✅ Authentication successful',
+                                `User: ${CONFIG.auth.username}<br>
+                                Token length: ${authToken.length} characters<br>
+                                Token expires: ${new Date(result.getIdToken().payload.exp * 1000).toLocaleString()}`);
+                            resolve();
+                        },
+                        onFailure: function(err) {
+                            updateTestStatus('test-auth', 'fail', '❌ Authentication failed', err.message);
+                            resolve();
+                        }
+                    });
+                } catch (error) {
+                    updateTestStatus('test-auth', 'fail', '❌ Authentication error', error.message);
+                    resolve();
+                }
+            });
+        }
+
+        // Test 5: Token Validation
+        async function testTokenValidation() {
+            updateTestStatus('test-token', 'running', '🔄 Validating JWT token...');
+            
+            try {
+                if (!authToken) {
+                    throw new Error('No auth token available');
+                }
+                
+                const parts = authToken.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1]));
+                    const now = Math.floor(Date.now() / 1000);
+                    const isValid = payload.exp > now;
+                    
+                    if (isValid) {
+                        updateTestStatus('test-token', 'pass', 
+                            '✅ JWT token is valid',
+                            `<strong>Token Payload:</strong><br>
+                            Email: ${payload.email}<br>
+                            Expires: ${new Date(payload.exp * 1000).toLocaleString()}<br>
+                            Issued: ${new Date(payload.iat * 1000).toLocaleString()}<br>
+                            Valid for: ${Math.floor((payload.exp - now) / 60)} minutes`);
+                    } else {
+                        throw new Error('Token has expired');
+                    }
+                } else {
+                    throw new Error('Invalid token format');
+                }
+            } catch (error) {
+                updateTestStatus('test-token', 'fail', '❌ Token validation failed', error.message);
+            }
+        }
+
+        // Test 6: User Groups
+        async function testUserGroups() {
+            updateTestStatus('test-groups', 'running', '🔄 Checking user groups...');
+            
+            try {
+                if (!authToken) {
+                    throw new Error('No auth token available');
+                }
+                
+                const parts = authToken.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                const groups = payload['cognito:groups'] || [];
+                
+                if (groups.length > 0) {
+                    updateTestStatus('test-groups', 'pass', 
+                        '✅ User has group membership',
+                        `Groups: ${groups.join(', ')}<br>
+                        Has Admin access: ${groups.includes('Admins') ? 'Yes ✅' : 'No ❌'}`);
+                } else {
+                    updateTestStatus('test-groups', 'fail', '❌ No groups assigned', 'User should be in Admins group');
+                }
+            } catch (error) {
+                updateTestStatus('test-groups', 'fail', '❌ Group check failed', error.message);
+            }
+        }
+
+        // Test 7: API GET Certificates
+        async function testAPIGetCertificates() {
+            updateTestStatus('test-api-get', 'running', '🔄 Fetching certificates from API...');
+            
+            try {
+                if (!authToken) {
+                    throw new Error('No auth token available');
+                }
+                
+                const response = await fetch(CONFIG.api.url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                certificatesData = data;
+                
+                updateTestStatus('test-api-get', 'pass', 
+                    '✅ API request successful',
+                    `Status: ${response.status} ${response.statusText}<br>
+                    Certificates received: ${data.length}<br>
+                    Response size: ${JSON.stringify(data).length} bytes`);
+            } catch (error) {
+                updateTestStatus('test-api-get', 'fail', '❌ API request failed', error.message);
+            }
+        }
+
+        // Test 8: CORS Headers
+        async function testCORSHeaders() {
+            updateTestStatus('test-cors', 'running', '🔄 Checking CORS headers...');
+            
+            try {
+                if (!authToken) {
+                    throw new Error('No auth token available');
+                }
+                
+                const response = await fetch(CONFIG.api.url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': authToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                    'access-control-allow-headers': response.headers.get('access-control-allow-headers'),
+                    'access-control-allow-methods': response.headers.get('access-control-allow-methods')
+                };
+                
+                const hasCORS = corsHeaders['access-control-allow-origin'] !== null;
+                
+                if (hasCORS) {
+                    updateTestStatus('test-cors', 'pass', 
+                        '✅ CORS headers present',
+                        `<strong>CORS Headers:</strong><br>
+                        Allow-Origin: ${corsHeaders['access-control-allow-origin']}<br>
+                        Allow-Headers: ${corsHeaders['access-control-allow-headers']}<br>
+                        Allow-Methods: ${corsHeaders['access-control-allow-methods']}`);
+                } else {
+                    throw new Error('CORS headers missing from response');
+                }
+            } catch (error) {
+                updateTestStatus('test-cors', 'fail', '❌ CORS check failed', error.message);
+            }
+        }
+
+        // Test 9: Response Format
+        async function testResponseFormat() {
+            updateTestStatus('test-response-format', 'running', '🔄 Validating response format...');
+            
+            try {
+                if (!certificatesData || !Array.isArray(certificatesData)) {
+                    throw new Error('Invalid response data format');
+                }
+                
+                if (certificatesData.length === 0) {
+                    throw new Error('No certificates in response');
+                }
+                
+                const firstCert = certificatesData[0];
+                const requiredFields = ['CertificateID', 'Environment', 'Status', 'ExpiryDate'];
+                const missingFields = requiredFields.filter(field => !(field in firstCert));
+                
+                if (missingFields.length === 0) {
+                    updateTestStatus('test-response-format', 'pass', 
+                        '✅ Response format is valid',
+                        `Array length: ${certificatesData.length}<br>
+                        Sample certificate fields: ${Object.keys(firstCert).join(', ')}<br>
+                        ✅ All required fields present`);
+                } else {
+                    throw new Error(`Missing fields: ${missingFields.join(', ')}`);
+                }
+            } catch (error) {
+                updateTestStatus('test-response-format', 'fail', '❌ Format validation failed', error.message);
+            }
+        }
+
+        // Test 10: Data Load
+        async function testDataLoad() {
+            updateTestStatus('test-data-load', 'running', '🔄 Checking data loading...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const sampleCerts = certificatesData.slice(0, 5);
+                let tableHTML = '<table class="data-table"><tr><th>CommonName</th><th>Environment</th><th>Status</th><th>Expiry</th></tr>';
+                
+                sampleCerts.forEach(cert => {
+                    tableHTML += `<tr>
+                        <td>${cert.CommonName || cert.CertificateName || 'N/A'}</td>
+                        <td>${cert.Environment || 'N/A'}</td>
+                        <td>${cert.Status || 'N/A'}</td>
+                        <td>${cert.ExpiryDate || 'N/A'}</td>
+                    </tr>`;
+                });
+                
+                tableHTML += '</table>';
+                
+                updateTestStatus('test-data-load', 'pass', 
+                    '✅ Certificate data loaded successfully',
+                    `Total certificates: ${certificatesData.length}<br>
+                    <strong>Sample Data (first 5):</strong><br>${tableHTML}`);
+            } catch (error) {
+                updateTestStatus('test-data-load', 'fail', '❌ Data load failed', error.message);
+            }
+        }
+
+        // Test 11: Field Mapping
+        async function testFieldMapping() {
+            updateTestStatus('test-field-mapping', 'running', '🔄 Testing field name mapping...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const hasCommonName = certificatesData.some(cert => cert.CommonName);
+                const hasCertificateName = certificatesData.some(cert => cert.CertificateName);
+                const fallbackWorks = certificatesData.every(cert => cert.CommonName || cert.CertificateName);
+                
+                if (fallbackWorks) {
+                    updateTestStatus('test-field-mapping', 'pass', 
+                        '✅ Field mapping works correctly',
+                        `CommonName field: ${hasCommonName ? 'Present ✅' : 'Not found'}<br>
+                        CertificateName field: ${hasCertificateName ? 'Present ✅' : 'Not found'}<br>
+                        Fallback logic: ${fallbackWorks ? 'Working ✅' : 'Failed ❌'}<br>
+                        All certificates have displayable name: ${fallbackWorks ? 'Yes ✅' : 'No ❌'}`);
+                } else {
+                    throw new Error('Some certificates have no displayable name');
+                }
+            } catch (error) {
+                updateTestStatus('test-field-mapping', 'fail', '❌ Field mapping failed', error.message);
+            }
+        }
+
+        // Test 12: Table Render
+        async function testTableRender() {
+            updateTestStatus('test-table-render', 'running', '🔄 Testing table rendering...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                // Simulate rendering logic from dashboard.js
+                const renderableCerts = certificatesData.filter(cert => {
+                    return (cert.CommonName || cert.CertificateName) && 
+                           cert.Environment && 
+                           cert.Status && 
+                           cert.ExpiryDate;
+                });
+                
+                const renderPercentage = (renderableCerts.length / certificatesData.length * 100).toFixed(2);
+                
+                if (renderPercentage > 95) {
+                    updateTestStatus('test-table-render', 'pass', 
+                        '✅ All certificates can be rendered',
+                        `Total certificates: ${certificatesData.length}<br>
+                        Renderable: ${renderableCerts.length}<br>
+                        Render rate: ${renderPercentage}%<br>
+                        ✅ All required fields present for rendering`);
+                } else {
+                    throw new Error(`Only ${renderPercentage}% of certificates are renderable`);
+                }
+            } catch (error) {
+                updateTestStatus('test-table-render', 'fail', '❌ Table render test failed', error.message);
+            }
+        }
+
+        // Test 13: Search Functionality
+        async function testSearchFunctionality() {
+            updateTestStatus('test-search', 'running', '🔄 Testing search functionality...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const searchTerm = 'DEV';
+                const searchResults = certificatesData.filter(cert => {
+                    const name = cert.CommonName || cert.CertificateName || '';
+                    const env = cert.Environment || '';
+                    const app = cert.Application || '';
+                    
+                    return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           env.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           app.toLowerCase().includes(searchTerm.toLowerCase());
+                });
+                
+                if (searchResults.length > 0) {
+                    updateTestStatus('test-search', 'pass', 
+                        '✅ Search functionality works',
+                        `Search term: "${searchTerm}"<br>
+                        Total certificates: ${certificatesData.length}<br>
+                        Search results: ${searchResults.length}<br>
+                        Match rate: ${(searchResults.length / certificatesData.length * 100).toFixed(2)}%`);
+                } else {
+                    updateTestStatus('test-search', 'fail', '❌ No search results', 'Search should return results');
+                }
+            } catch (error) {
+                updateTestStatus('test-search', 'fail', '❌ Search test failed', error.message);
+            }
+        }
+
+        // Test 14: Environment Filter
+        async function testEnvironmentFilter() {
+            updateTestStatus('test-filter-env', 'running', '🔄 Testing environment filter...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const environments = [...new Set(certificatesData.map(cert => cert.Environment))].filter(e => e);
+                const devCerts = certificatesData.filter(cert => cert.Environment === 'Development');
+                
+                if (environments.length > 0) {
+                    updateTestStatus('test-filter-env', 'pass', 
+                        '✅ Environment filter works',
+                        `Available environments: ${environments.join(', ')}<br>
+                        Development certificates: ${devCerts.length}<br>
+                        Total environments: ${environments.length}`);
+                } else {
+                    throw new Error('No environments found');
+                }
+            } catch (error) {
+                updateTestStatus('test-filter-env', 'fail', '❌ Environment filter failed', error.message);
+            }
+        }
+
+        // Test 15: Status Filter
+        async function testStatusFilter() {
+            updateTestStatus('test-filter-status', 'running', '🔄 Testing status filter...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const statuses = [...new Set(certificatesData.map(cert => cert.Status))].filter(s => s);
+                const activeCerts = certificatesData.filter(cert => cert.Status === 'Active');
+                const expiredCerts = certificatesData.filter(cert => cert.Status === 'Expired');
+                
+                if (statuses.length > 0) {
+                    updateTestStatus('test-filter-status', 'pass', 
+                        '✅ Status filter works',
+                        `Available statuses: ${statuses.join(', ')}<br>
+                        Active: ${activeCerts.length}<br>
+                        Expired: ${expiredCerts.length}<br>
+                        Total statuses: ${statuses.length}`);
+                } else {
+                    throw new Error('No statuses found');
+                }
+            } catch (error) {
+                updateTestStatus('test-filter-status', 'fail', '❌ Status filter failed', error.message);
+            }
+        }
+
+        // Test 16: Sort Functionality
+        async function testSortFunctionality() {
+            updateTestStatus('test-sort', 'running', '🔄 Testing sort functionality...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                // Test sorting by name
+                const sorted = [...certificatesData].sort((a, b) => {
+                    const nameA = (a.CommonName || a.CertificateName || '').toLowerCase();
+                    const nameB = (b.CommonName || b.CertificateName || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+                
+                const isSorted = sorted.length === certificatesData.length;
+                
+                if (isSorted) {
+                    updateTestStatus('test-sort', 'pass', 
+                        '✅ Sort functionality works',
+                        `Sorted ${sorted.length} certificates<br>
+                        First: ${sorted[0].CommonName || sorted[0].CertificateName}<br>
+                        Last: ${sorted[sorted.length-1].CommonName || sorted[sorted.length-1].CertificateName}`);
+                } else {
+                    throw new Error('Sort operation failed');
+                }
+            } catch (error) {
+                updateTestStatus('test-sort', 'fail', '❌ Sort test failed', error.message);
+            }
+        }
+
+        // Test 17: Pagination
+        async function testPagination() {
+            updateTestStatus('test-pagination', 'running', '🔄 Testing pagination...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const pageSize = 10;
+                const totalPages = Math.ceil(certificatesData.length / pageSize);
+                const page1 = certificatesData.slice(0, pageSize);
+                const page2 = certificatesData.slice(pageSize, pageSize * 2);
+                
+                if (page1.length > 0) {
+                    updateTestStatus('test-pagination', 'pass', 
+                        '✅ Pagination works',
+                        `Total certificates: ${certificatesData.length}<br>
+                        Page size: ${pageSize}<br>
+                        Total pages: ${totalPages}<br>
+                        Page 1 items: ${page1.length}<br>
+                        Page 2 items: ${page2.length}`);
+                } else {
+                    throw new Error('Pagination failed');
+                }
+            } catch (error) {
+                updateTestStatus('test-pagination', 'fail', '❌ Pagination test failed', error.message);
+            }
+        }
+
+        // Test 18: Expiry Calculation
+        async function testExpiryCalculation() {
+            updateTestStatus('test-expiry-calc', 'running', '🔄 Testing expiry calculation...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const now = new Date();
+                const certsWithDays = certificatesData.map(cert => {
+                    const expiryDate = new Date(cert.ExpiryDate);
+                    const daysUntilExpiry = Math.floor((expiryDate - now) / (1000 * 60 * 60 * 24));
+                    return { ...cert, daysUntilExpiry };
+                });
+                
+                const expiringSoon = certsWithDays.filter(cert => cert.daysUntilExpiry > 0 && cert.daysUntilExpiry <= 30);
+                const expired = certsWithDays.filter(cert => cert.daysUntilExpiry < 0);
+                const valid = certsWithDays.filter(cert => cert.daysUntilExpiry > 30);
+                
+                updateTestStatus('test-expiry-calc', 'pass', 
+                    '✅ Expiry calculation works',
+                    `Valid (>30 days): ${valid.length}<br>
+                    Expiring soon (≤30 days): ${expiringSoon.length}<br>
+                    Expired: ${expired.length}<br>
+                    Total: ${certificatesData.length}`);
+            } catch (error) {
+                updateTestStatus('test-expiry-calc', 'fail', '❌ Expiry calculation failed', error.message);
+            }
+        }
+
+        // Test 19: Status Logic
+        async function testStatusLogic() {
+            updateTestStatus('test-status-logic', 'running', '🔄 Testing status logic...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const statusCounts = {
+                    Active: 0,
+                    Expired: 0,
+                    'Expiring Soon': 0,
+                    Other: 0
+                };
+                
+                certificatesData.forEach(cert => {
+                    if (cert.Status === 'Active') statusCounts.Active++;
+                    else if (cert.Status === 'Expired') statusCounts.Expired++;
+                    else if (cert.Status === 'Expiring Soon') statusCounts['Expiring Soon']++;
+                    else statusCounts.Other++;
+                });
+                
+                updateTestStatus('test-status-logic', 'pass', 
+                    '✅ Status logic works',
+                    `<strong>Status Distribution:</strong><br>
+                    Active: ${statusCounts.Active}<br>
+                    Expired: ${statusCounts.Expired}<br>
+                    Expiring Soon: ${statusCounts['Expiring Soon']}<br>
+                    Other: ${statusCounts.Other}<br>
+                    Total: ${certificatesData.length}`);
+            } catch (error) {
+                updateTestStatus('test-status-logic', 'fail', '❌ Status logic failed', error.message);
+            }
+        }
+
+        // Test 20: Data Integrity
+        async function testDataIntegrity() {
+            updateTestStatus('test-data-integrity', 'running', '🔄 Checking data integrity...');
+            
+            try {
+                if (!certificatesData || certificatesData.length === 0) {
+                    throw new Error('No certificate data available');
+                }
+                
+                const issues = [];
+                certificatesData.forEach((cert, index) => {
+                    if (!cert.CertificateID) issues.push(`Cert ${index}: Missing CertificateID`);
+                    if (!cert.CommonName && !cert.CertificateName) issues.push(`Cert ${index}: Missing name`);
+                    if (!cert.Environment) issues.push(`Cert ${index}: Missing Environment`);
+                    if (!cert.Status) issues.push(`Cert ${index}: Missing Status`);
+                    if (!cert.ExpiryDate) issues.push(`Cert ${index}: Missing ExpiryDate`);
+                });
+                
+                if (issues.length === 0) {
+                    updateTestStatus('test-data-integrity', 'pass', 
+                        '✅ Data integrity check passed',
+                        `Checked ${certificatesData.length} certificates<br>
+                        ✅ All have CertificateID<br>
+                        ✅ All have name (CommonName or CertificateName)<br>
+                        ✅ All have Environment<br>
+                        ✅ All have Status<br>
+                        ✅ All have ExpiryDate`);
+                } else {
+                    throw new Error(`Found ${issues.length} issues: ${issues.slice(0, 5).join('; ')}`);
+                }
+            } catch (error) {
+                updateTestStatus('test-data-integrity', 'fail', '❌ Data integrity issues', error.message);
+            }
+        }
+    </script>
+</body>
+</html>

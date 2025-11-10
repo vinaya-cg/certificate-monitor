@@ -57,8 +57,6 @@ resource "aws_lambda_function" "acm_sync" {
 resource "aws_cloudwatch_log_group" "acm_sync" {
   name              = "/aws/lambda/${local.lambda_name}"
   retention_in_days = var.log_retention_days
-
-  tags = var.common_tags
 }
 
 # ===================================================================
@@ -135,8 +133,6 @@ resource "aws_iam_policy" "acm_sync_policy" {
       }
     ]
   })
-
-  tags = var.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "acm_sync_policy_attach" {

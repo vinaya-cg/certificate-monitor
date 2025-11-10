@@ -64,6 +64,7 @@ resource "aws_lambda_function" "dashboard_api" {
   environment {
     variables = {
       CERTIFICATES_TABLE = var.certificates_table_name
+      ACM_SYNC_FUNCTION  = var.acm_sync_function_name
       # JWT validation is handled by API Gateway Cognito Authorizer
       # User info is available in event['requestContext']['authorizer']['claims']
     }

@@ -1,10 +1,8 @@
 // Certificate Management Dashboard - JavaScript
 // API Configuration
 // This URL will be replaced during Terraform deployment
-// Certificate Management Dashboard - JavaScript
-// API Configuration
-// This URL will be replaced during Terraform deployment
 const API_URL = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure/certificates';
+const API_BASE_URL = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure';
 
 // Configuration (these will be populated from environment variables)
 let API_CONFIG = {
@@ -1313,6 +1311,202 @@ function formatExcelDate(dateValue) {
 
 function refreshData() {
     loadCertificates();
+}
+
+async function triggerACMSync() {
+    console.log('ACM Sync button clicked');
+    
+    try {
+        // Confirm action
+        const confirmed = confirm('Synchronize certificates from AWS Certificate Manager?\n\nThis will scan ACM in your AWS account and update the dashboard with the latest certificate information.');
+        console.log('User confirmed:', confirmed);
+        
+        if (!confirmed) {
+            console.log('User cancelled sync');
+            return;
+        }
+
+        console.log('Opening modal...');
+        
+        // Verify modal elements exist
+        const modal = document.getElementById('acmSyncModal');
+        const progressDiv = document.getElementById('acmSyncProgress');
+        const resultsDiv = document.getElementById('acmSyncResults');
+        const errorDiv = document.getElementById('acmSyncError');
+        
+        if (!modal) {
+            console.error('Modal not found!');
+            alert('Error: Sync modal not found. Please refresh the page.');
+            return;
+        }
+        
+        console.log('Modal elements found:', {modal: !!modal, progress: !!progressDiv, results: !!resultsDiv, error: !!errorDiv});
+        
+        // Show progress modal
+        openModal('acmSyncModal');
+        
+        if (progressDiv) progressDiv.style.display = 'block';
+        if (resultsDiv) resultsDiv.style.display = 'none';
+        if (errorDiv) errorDiv.style.display = 'none';
+
+        // Disable sync button
+        const syncBtn = document.getElementById('acmSyncBtn');
+        const originalText = syncBtn.innerHTML;
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+
+        console.log('Getting auth headers...');
+        const headers = await getAuthHeaders();
+        console.log('Headers obtained, calling API:', `${API_BASE_URL}/sync-acm`);
+
+        const response = await fetch(`${API_BASE_URL}/sync-acm`, {
+            method: 'POST',
+            headers: headers
+        });
+
+        console.log('API response status:', response.status);
+
+        if (response.status === 401 || response.status === 403) {
+            console.error('Authentication failed, redirecting to login...');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error('API error:', errorData);
+            throw new Error(`Failed to trigger ACM sync: ${response.status} - ${errorData}`);
+        }
+
+        const result = await response.json();
+        console.log('ACM Sync triggered successfully:', result);
+
+        // Poll for completion (check CloudWatch logs or DynamoDB)
+        console.log('Starting to poll for sync status...');
+        await pollACMSyncStatus();
+
+        console.log('Polling complete, re-enabling button');
+        // Re-enable sync button
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = originalText;
+
+    } catch (error) {
+        console.error('Error triggering ACM sync:', error);
+        console.error('Error stack:', error.stack);
+        
+        // Show error in modal
+        const progressDiv = document.getElementById('acmSyncProgress');
+        const resultsDiv = document.getElementById('acmSyncResults');
+        const errorDiv = document.getElementById('acmSyncError');
+        const errorMsgDiv = document.getElementById('acmSyncErrorMessage');
+        
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (resultsDiv) resultsDiv.style.display = 'none';
+        if (errorDiv) errorDiv.style.display = 'block';
+        if (errorMsgDiv) errorMsgDiv.textContent = error.message;
+
+        // Re-enable sync button
+        const syncBtn = document.getElementById('acmSyncBtn');
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = '<i class="fas fa-cloud-download-alt"></i> Sync from ACM';
+    }
+}
+
+async function pollACMSyncStatus() {
+    console.log('pollACMSyncStatus started');
+    const maxAttempts = 60; // Poll for up to 60 seconds
+    const pollInterval = 1000; // Poll every second
+    let attempts = 0;
+    let lastCount = 0;
+
+    return new Promise((resolve) => {
+        const pollTimer = setInterval(async () => {
+            attempts++;
+            console.log(`Polling attempt ${attempts}/${maxAttempts}`);
+            
+            try {
+                // Check for newly synced certificates (those with LastSyncedFromACM in last 2 minutes)
+                const headers = await getAuthHeaders();
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`Fetched ${data.length} total certificates`);
+                    
+                    const recentlySynced = data.filter(cert => {
+                        if (cert.LastSyncedFromACM) {
+                            const syncTime = new Date(cert.LastSyncedFromACM);
+                            const now = new Date();
+                            const diffMinutes = (now - syncTime) / 1000 / 60;
+                            return diffMinutes < 2; // Synced in last 2 minutes
+                        }
+                        return false;
+                    });
+
+                    const currentCount = recentlySynced.length;
+                    console.log(`Found ${currentCount} recently synced certificates (last count: ${lastCount})`);
+                    
+                    // If count stabilized or reached max attempts
+                    if (currentCount > 0 && (currentCount === lastCount || attempts >= maxAttempts)) {
+                        clearInterval(pollTimer);
+                        console.log('Sync complete, showing results');
+                        
+                        // Count added vs updated
+                        const added = recentlySynced.filter(c => c.Version === 1 || c.Version === '1').length;
+                        const updated = currentCount - added;
+                        
+                        console.log(`Results: ${currentCount} found, ${added} added, ${updated} updated`);
+                        
+                        // Show results
+                        showACMSyncResults(currentCount, added, updated, 0);
+                        resolve();
+                    } else {
+                        lastCount = currentCount;
+                    }
+                } else if (attempts >= maxAttempts) {
+                    // Timeout - show what we have
+                    console.log('Max attempts reached, showing results');
+                    clearInterval(pollTimer);
+                    showACMSyncResults(lastCount, 0, lastCount, 0);
+                    resolve();
+                }
+            } catch (error) {
+                console.error('Error polling sync status:', error);
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollTimer);
+                    console.log('Max attempts reached after error');
+                    resolve();
+                }
+            }
+        }, pollInterval);
+    });
+}
+
+function showACMSyncResults(found, added, updated, errors) {
+    console.log('showACMSyncResults called:', {found, added, updated, errors});
+    
+    const progressDiv = document.getElementById('acmSyncProgress');
+    const errorDiv = document.getElementById('acmSyncError');
+    const resultsDiv = document.getElementById('acmSyncResults');
+    
+    if (progressDiv) progressDiv.style.display = 'none';
+    if (errorDiv) errorDiv.style.display = 'none';
+    if (resultsDiv) resultsDiv.style.display = 'block';
+    
+    const foundEl = document.getElementById('acmSyncFound');
+    const addedEl = document.getElementById('acmSyncAdded');
+    const updatedEl = document.getElementById('acmSyncUpdated');
+    const errorsEl = document.getElementById('acmSyncErrors');
+    
+    if (foundEl) foundEl.textContent = found;
+    if (addedEl) addedEl.textContent = added;
+    if (updatedEl) updatedEl.textContent = updated;
+    if (errorsEl) errorsEl.textContent = errors;
+    
+    console.log('Results displayed');
 }
 
 function exportData() {

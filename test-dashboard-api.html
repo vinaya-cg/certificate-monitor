@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dashboard API</title>
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6/dist/amazon-cognito-identity.min.js"></script>
+</head>
+<body>
+    <h1>Certificate Dashboard API Test</h1>
+    <div id="status">Testing...</div>
+    <div id="results"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        // Cognito configuration
+        const poolData = {
+            UserPoolId: 'eu-west-1_cWIxi5SPd',
+            ClientId: '1dq9f0m4fil3fiqcpk0h575kb1'
+        };
+        
+        const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+        
+        // API URL
+        const API_URL = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure';
+        
+        function log(message, isError = false) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            p.style.color = isError ? 'red' : 'green';
+            resultsDiv.appendChild(p);
+            console.log(message);
+        }
+        
+        async function testAPI() {
+            try {
+                // Step 1: Authenticate
+                statusDiv.textContent = 'Step 1: Authenticating...';
+                log('=== AUTHENTICATION TEST ===');
+                
+                const authenticationData = {
+                    Username: 'vinaya-c.nayanegali@capgemini.com',
+                    Password: 'Admin@123',
+                };
+                
+                const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+                
+                const userData = {
+                    Username: 'vinaya-c.nayanegali@capgemini.com',
+                    Pool: userPool
+                };
+                
+                const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+                
+                // Authenticate
+                cognitoUser.authenticateUser(authenticationDetails, {
+                    onSuccess: async function (session) {
+                        log('✅ Authentication successful!');
+                        const idToken = session.getIdToken().getJwtToken();
+                        log(`ID Token obtained (length: ${idToken.length})`);
+                        
+                        // Step 2: Call API
+                        statusDiv.textContent = 'Step 2: Calling API...';
+                        log('\n=== API CALL TEST ===');
+                        log(`API URL: ${API_URL}`);
+                        
+                        try {
+                            const response = await fetch(API_URL, {
+                                method: 'GET',
+                                headers: {
+                                    'Authorization': `Bearer ${idToken}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+                            
+                            log(`Response Status: ${response.status}`);
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                log('✅ API call successful!');
+                                log(`Certificate count: ${data.count}`);
+                                
+                                if (data.certificates && data.certificates.length > 0) {
+                                    log('\n=== FIRST CERTIFICATE ===');
+                                    const cert = data.certificates[0];
+                                    log(`CommonName: ${cert.CommonName}`);
+                                    log(`CertificateName: ${cert.CertificateName}`);
+                                    log(`Environment: ${cert.Environment}`);
+                                    log(`Status: ${cert.Status}`);
+                                    log(`ExpiryDate: ${cert.ExpiryDate}`);
+                                    
+                                    log('\n=== FIELD MAPPING TEST ===');
+                                    const displayName = cert.CommonName || cert.CertificateName;
+                                    if (displayName) {
+                                        log(`✅ Display name would be: ${displayName}`);
+                                        statusDiv.textContent = '✅ ALL TESTS PASSED!';
+                                        statusDiv.style.color = 'green';
+                                    } else {
+                                        log('❌ No display name found!', true);
+                                        statusDiv.textContent = '❌ Field mapping issue!';
+                                        statusDiv.style.color = 'red';
+                                    }
+                                } else {
+                                    log('❌ No certificates in response!', true);
+                                }
+                            } else {
+                                const errorText = await response.text();
+                                log(`❌ API call failed: ${errorText}`, true);
+                                statusDiv.textContent = `❌ API returned ${response.status}`;
+                                statusDiv.style.color = 'red';
+                            }
+                        } catch (apiError) {
+                            log(`❌ API call error: ${apiError.message}`, true);
+                            statusDiv.textContent = '❌ API call failed!';
+                            statusDiv.style.color = 'red';
+                        }
+                    },
+                    
+                    onFailure: function(err) {
+                        log(`❌ Authentication failed: ${err.message}`, true);
+                        statusDiv.textContent = '❌ Authentication failed!';
+                        statusDiv.style.color = 'red';
+                    }
+                });
+                
+            } catch (error) {
+                log(`❌ Test error: ${error.message}`, true);
+                statusDiv.textContent = '❌ Test failed!';
+                statusDiv.style.color = 'red';
+            }
+        }
+        
+        // Run test on page load
+        window.addEventListener('load', testAPI);
+    </script>
+</body>
+</html>

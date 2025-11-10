@@ -461,6 +461,9 @@
                 <button class="btn btn-primary" onclick="refreshData()">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
+                <button class="btn btn-info" onclick="triggerACMSync()" id="acmSyncBtn">
+                    <i class="fas fa-cloud-download-alt"></i> Sync from ACM v2
+                </button>
                 <button class="btn btn-primary" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
@@ -668,10 +671,72 @@
         </div>
     </div>
 
+    <!-- ACM Sync Status Modal -->
+    <div id="acmSyncModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cloud-download-alt"></i> ACM Certificate Sync</h2>
+                <span class="close" onclick="closeModal('acmSyncModal')">&times;</span>
+            </div>
+            <div id="acmSyncContent" style="padding: 20px;">
+                <div id="acmSyncProgress" style="text-align: center; padding: 30px 20px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #4CAF50; margin-bottom: 20px;"></i>
+                    <h3 style="margin-bottom: 10px;">Synchronizing Certificates...</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Scanning AWS Certificate Manager for certificates in your account.</p>
+                    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                        <p style="margin: 0; color: #555;">This may take 30-60 seconds depending on the number of certificates.</p>
+                    </div>
+                </div>
+                <div id="acmSyncResults" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <i class="fas fa-check-circle" style="font-size: 64px; color: #4CAF50; margin-bottom: 15px;"></i>
+                        <h3 style="margin-bottom: 10px; color: #4CAF50;">Sync Complete!</h3>
+                    </div>
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #2196F3;" id="acmSyncFound">0</div>
+                                <div style="color: #666; margin-top: 5px;">Certificates Found</div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #4CAF50;" id="acmSyncAdded">0</div>
+                                <div style="color: #666; margin-top: 5px;">New Certificates</div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #FF9800;" id="acmSyncUpdated">0</div>
+                                <div style="color: #666; margin-top: 5px;">Updated</div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #f44336;" id="acmSyncErrors">0</div>
+                                <div style="color: #666; margin-top: 5px;">Errors</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary" onclick="closeModal('acmSyncModal'); loadCertificates();">
+                            <i class="fas fa-sync"></i> Refresh Dashboard
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeModal('acmSyncModal')" style="margin-left: 10px;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+                <div id="acmSyncError" style="display: none; text-align: center; padding: 30px 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: #f44336; margin-bottom: 15px;"></i>
+                    <h3 style="margin-bottom: 10px; color: #f44336;">Sync Failed</h3>
+                    <p id="acmSyncErrorMessage" style="color: #666; margin-bottom: 20px;"></p>
+                    <button class="btn btn-secondary" onclick="closeModal('acmSyncModal')">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Cognito SDK -->
     <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6/dist/amazon-cognito-identity.min.js"></script>
     <script src="auth.js"></script>
-    <script src="dashboard.js?v=20251029-1630"></script>
+    <script src="dashboard.js?v=20251110-1525"></script>
     
     <script>
         // Protect page - require authentication

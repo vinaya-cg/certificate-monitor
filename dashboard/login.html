@@ -229,6 +229,106 @@
                 padding: 30px 20px;
             }
         }
+
+        /* Password Change Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+        }
+
+        .modal-header h2 {
+            margin: 0 0 10px 0;
+            font-size: 22px;
+        }
+
+        .modal-header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-footer {
+            padding: 0 30px 30px 30px;
+        }
+
+        .password-requirements {
+            display: block;
+            margin-top: 10px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .password-requirements ul {
+            margin: 8px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .password-requirements li {
+            margin: 4px 0;
+            transition: all 0.3s ease;
+        }
+
+        .password-requirements li.valid {
+            color: #4CAF50;
+            font-weight: 500;
+        }
+
+        .password-requirements li.valid::marker {
+            content: "✓ ";
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -280,6 +380,241 @@
         </div>
     </div>
 
+    <!-- Password Change Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-key"></i> Change Password</h2>
+                <p>You must change your temporary password before continuing</p>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="newPassword" placeholder="Enter new password" required>
+                    </div>
+                    <small class="password-requirements">
+                        <i class="fas fa-info-circle"></i> Password must contain:
+                        <ul>
+                            <li id="req-length">At least 8 characters</li>
+                            <li id="req-upper">One uppercase letter (A-Z)</li>
+                            <li id="req-lower">One lowercase letter (a-z)</li>
+                            <li id="req-number">One number (0-9)</li>
+                            <li id="req-symbol">One symbol (!@#$%^&*)</li>
+                        </ul>
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="confirmPassword" placeholder="Confirm new password" required>
+                    </div>
+                </div>
+                <div id="passwordError" class="error-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="changePasswordBtn" class="btn-login">
+                    <i class="fas fa-check"></i> Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cognito SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6/dist/amazon-cognito-identity.min.js"></script>
     <script src="auth.js"></script>
+    
+    <script>
+        let pendingPasswordChange = null;
+
+        // Password validation
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 8,
+                upper: /[A-Z]/.test(password),
+                lower: /[a-z]/.test(password),
+                number: /[0-9]/.test(password),
+                symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+            };
+
+            // Update UI
+            document.getElementById('req-length').classList.toggle('valid', requirements.length);
+            document.getElementById('req-upper').classList.toggle('valid', requirements.upper);
+            document.getElementById('req-lower').classList.toggle('valid', requirements.lower);
+            document.getElementById('req-number').classList.toggle('valid', requirements.number);
+            document.getElementById('req-symbol').classList.toggle('valid', requirements.symbol);
+
+            return Object.values(requirements).every(req => req);
+        }
+
+        // Show password change modal
+        function showPasswordModal(cognitoUser, userAttributes) {
+            pendingPasswordChange = { cognitoUser, userAttributes };
+            
+            const modal = document.getElementById('passwordModal');
+            const newPasswordInput = document.getElementById('newPassword');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const errorDiv = document.getElementById('passwordError');
+            
+            // Reset form
+            newPasswordInput.value = '';
+            confirmPasswordInput.value = '';
+            errorDiv.textContent = '';
+            errorDiv.classList.remove('show');
+            
+            // Reset requirements display
+            document.querySelectorAll('.password-requirements li').forEach(li => {
+                li.classList.remove('valid');
+            });
+            
+            // Show modal
+            modal.classList.add('show');
+            newPasswordInput.focus();
+        }
+
+        // Hide password change modal
+        function hidePasswordModal() {
+            const modal = document.getElementById('passwordModal');
+            modal.classList.remove('show');
+            pendingPasswordChange = null;
+        }
+
+        // Real-time password validation
+        document.getElementById('newPassword').addEventListener('input', function(e) {
+            validatePassword(e.target.value);
+        });
+
+        // Handle password change
+        document.getElementById('changePasswordBtn').addEventListener('click', async function() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorDiv = document.getElementById('passwordError');
+            const changeBtn = this;
+            
+            // Hide previous errors
+            errorDiv.classList.remove('show');
+            
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Passwords do not match';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            // Validate password requirements
+            if (!validatePassword(newPassword)) {
+                errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> Password does not meet all requirements';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            // Disable button
+            changeBtn.disabled = true;
+            changeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing Password...';
+            
+            try {
+                // Change password - pass empty object (Cognito preserves existing attributes)
+                await changePassword(
+                    pendingPasswordChange.cognitoUser, 
+                    newPassword, 
+                    {}
+                );
+                
+                // Success!
+                hidePasswordModal();
+                
+                const successMessage = document.getElementById('errorMessage');
+                successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Password changed successfully! Please login with your new password.';
+                successMessage.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+                successMessage.classList.add('show');
+                
+                // Reset login form
+                document.getElementById('password').value = '';
+                document.getElementById('username').focus();
+                
+                // Re-enable button
+                changeBtn.disabled = false;
+                changeBtn.innerHTML = '<i class="fas fa-check"></i> Change Password';
+                
+            } catch (changeError) {
+                console.error('Password change error:', changeError);
+                
+                // Re-enable button
+                changeBtn.disabled = false;
+                changeBtn.innerHTML = '<i class="fas fa-check"></i> Change Password';
+                
+                // Show error
+                errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + 
+                    (changeError.message || 'Password change failed. Please try again.');
+                errorDiv.classList.add('show');
+            }
+        });
+
+        // Allow Enter key in confirm password field
+        document.getElementById('confirmPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('changePasswordBtn').click();
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const errorMessage = document.getElementById('errorMessage');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            // Hide previous errors
+            errorMessage.classList.remove('show');
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+            
+            try {
+                await signIn(username, password);
+                
+                // Successful login - redirect to dashboard
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                
+                // Handle different error types
+                if (error.code === 'NEW_PASSWORD_REQUIRED') {
+                    // User needs to change temporary password - show modal
+                    showPasswordModal(error.cognitoUser, error.userAttributes);
+                    
+                } else if (error.code === 'NotAuthorizedException') {
+                    errorMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Invalid username or password';
+                    errorMessage.classList.add('show');
+                } else if (error.code === 'UserNotFoundException') {
+                    errorMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> User not found';
+                    errorMessage.classList.add('show');
+                } else if (error.code === 'PasswordResetRequiredException') {
+                    errorMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Password reset required. Please contact administrator.';
+                    errorMessage.classList.add('show');
+                } else {
+                    errorMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (error.message || 'Login failed. Please try again.');
+                    errorMessage.classList.add('show');
+                }
+            }
+        });
+        
+        // Check if already logged in
+        window.addEventListener('load', async function() {
+            if (await isAuthenticated()) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
 </body>
 </html>

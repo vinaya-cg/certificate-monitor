@@ -66,3 +66,8 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "acm_sync_function_name" {
+  description = "Name of the ACM sync Lambda function"
+  type        = string
+}

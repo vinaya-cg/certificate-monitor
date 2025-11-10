@@ -91,6 +91,14 @@ resource "aws_iam_policy" "lambda_policy" {
           "ses:SendRawEmail"
         ]
         Resource = "*"
+      },
+      # Lambda invoke permissions (for ACM sync)
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction"
+        ]
+        Resource = "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${local.common_name}-acm-sync"
       }
     ]
   })
