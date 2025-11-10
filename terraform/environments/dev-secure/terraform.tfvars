@@ -50,9 +50,9 @@ enable_servicenow_integration = true
 servicenow_secret_name = "cert-management/servicenow/credentials"
 servicenow_secret_arn  = "arn:aws:secretsmanager:eu-west-1:992155623828:secret:cert-management/servicenow/credentials-agnpGG"
 
-# DRY-RUN MODE - Re-enabled due to OAuth authentication issues
-# Production mode requires valid ServiceNow OAuth credentials
-servicenow_dry_run = "true"
+# PRODUCTION MODE - Credentials verified and working
+# ServiceNow integration fully operational with azure_monitoring sender
+servicenow_dry_run = "false"
 
 # Enable automatic daily execution
 servicenow_enable_schedule = true
@@ -62,4 +62,16 @@ servicenow_schedule = "cron(5 9 * * ? *)"
 
 # Disable CloudWatch alarms initially (enable after testing)
 servicenow_enable_alarms = false
+
+# ===================================================================
+# SERVICENOW WEBHOOK INTEGRATION (BIDIRECTIONAL)
+# ===================================================================
+
+# Enable webhook handler for receiving ServiceNow incident updates
+# DISABLED - Infrastructure ready but not active until ServiceNow Business Rule configured
+enable_servicenow_webhook = false
+
+# Webhook secret for signature validation (optional but recommended)
+servicenow_webhook_secret_name = "cert-management/servicenow/webhook-secret"
+# servicenow_webhook_secret_arn will be created when secret is set up
 

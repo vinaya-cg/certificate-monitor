@@ -183,3 +183,31 @@ output "servicenow_status" {
     message = "ServiceNow integration is disabled. Set enable_servicenow_integration=true to enable"
   }
 }
+
+# ===================================================================
+# SERVICENOW WEBHOOK INTEGRATION OUTPUTS
+# ===================================================================
+
+output "servicenow_webhook_url" {
+  description = "ServiceNow webhook endpoint URL (configure this in ServiceNow Business Rule)"
+  value       = var.enable_servicenow_webhook ? module.servicenow_webhook[0].webhook_endpoint : "Webhook integration disabled"
+}
+
+output "servicenow_webhook_lambda_name" {
+  description = "Name of the ServiceNow webhook handler Lambda function"
+  value       = var.enable_servicenow_webhook ? module.servicenow_webhook[0].lambda_function_name : "Not enabled"
+}
+
+output "servicenow_webhook_status" {
+  description = "ServiceNow webhook integration status"
+  value = var.enable_servicenow_webhook ? {
+    enabled              = true
+    webhook_endpoint     = module.servicenow_webhook[0].webhook_endpoint
+    lambda_function_name = module.servicenow_webhook[0].lambda_function_name
+    api_gateway_id       = module.servicenow_webhook[0].api_gateway_id
+    next_steps          = "Configure Business Rule in ServiceNow using the webhook_endpoint URL"
+  } : {
+    enabled = false
+    message = "Webhook integration disabled. Set enable_servicenow_webhook=true to enable when ready"
+  }
+}

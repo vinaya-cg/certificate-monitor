@@ -133,3 +133,25 @@ variable "servicenow_enable_alarms" {
   type        = bool
   default     = false  # Disable initially, enable after testing
 }
+
+# ===================================================================
+# SERVICENOW WEBHOOK INTEGRATION (BIDIRECTIONAL)
+# ===================================================================
+
+variable "enable_servicenow_webhook" {
+  description = "Enable ServiceNow webhook handler for incident assignment updates"
+  type        = bool
+  default     = false  # Disabled until ServiceNow Business Rule is configured
+}
+
+variable "servicenow_webhook_secret_name" {
+  description = "Name of Secrets Manager secret for webhook signature validation"
+  type        = string
+  default     = "cert-management/servicenow/webhook-secret"
+}
+
+variable "servicenow_webhook_secret_arn" {
+  description = "ARN of Secrets Manager secret for webhook validation"
+  type        = string
+  default     = ""  # Will be populated when secret is created
+}

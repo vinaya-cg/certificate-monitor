@@ -293,6 +293,29 @@ module "servicenow_integration" {
 }
 
 # ===================================================================
+# SERVICENOW WEBHOOK INTEGRATION MODULE (Bidirectional - Optional)
+# ===================================================================
+
+module "servicenow_webhook" {
+  count  = var.enable_servicenow_webhook ? 1 : 0
+  source = "../../modules/lambda_servicenow_webhook"
+
+  project_name            = var.project_name
+  environment             = var.environment
+  aws_region              = data.aws_region.current.name
+  certificates_table_name = module.database.certificates_table_name
+  certificates_table_arn  = module.database.certificates_table_arn
+  logs_table_name         = module.database.logs_table_name
+  logs_table_arn          = module.database.logs_table_arn
+  webhook_secret_name     = var.servicenow_webhook_secret_name
+  webhook_secret_arn      = var.servicenow_webhook_secret_arn != "" ? var.servicenow_webhook_secret_arn : "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.servicenow_webhook_secret_name}-*"
+  log_retention_days      = var.log_retention_days
+  enable_alarms           = var.servicenow_enable_alarms
+
+  depends_on = [module.database, module.iam]
+}
+
+# ===================================================================
 # SECURE DASHBOARD MODULE (Auto-inject Cognito Config)
 # ===================================================================
 
