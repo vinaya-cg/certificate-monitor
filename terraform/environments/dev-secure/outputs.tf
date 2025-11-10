@@ -151,3 +151,35 @@ output "deployment_summary" {
   
   EOT
 }
+
+# ===================================================================
+# SERVICENOW INTEGRATION OUTPUTS
+# ===================================================================
+
+output "servicenow_lambda_function_name" {
+  description = "Name of the ServiceNow ticket creator Lambda function"
+  value       = var.enable_servicenow_integration ? module.servicenow_integration[0].lambda_function_name : "Not enabled"
+}
+
+output "servicenow_lambda_function_arn" {
+  description = "ARN of the ServiceNow ticket creator Lambda function"
+  value       = var.enable_servicenow_integration ? module.servicenow_integration[0].lambda_function_arn : null
+}
+
+output "servicenow_eventbridge_rule_name" {
+  description = "Name of the ServiceNow EventBridge schedule rule"
+  value       = var.enable_servicenow_integration ? module.servicenow_integration[0].eventbridge_rule_name : "Not enabled"
+}
+
+output "servicenow_status" {
+  description = "ServiceNow integration status and configuration"
+  value = var.enable_servicenow_integration ? {
+    enabled     = true
+    dry_run     = var.servicenow_dry_run
+    schedule    = var.servicenow_schedule
+    secret_name = var.servicenow_secret_name
+  } : {
+    enabled = false
+    message = "ServiceNow integration is disabled. Set enable_servicenow_integration=true to enable"
+  }
+}

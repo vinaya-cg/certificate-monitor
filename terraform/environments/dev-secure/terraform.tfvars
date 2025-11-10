@@ -38,3 +38,28 @@ viewer_user = {
 # API Gateway Throttling
 api_throttling_burst_limit = 5000
 api_throttling_rate_limit  = 2000
+
+# ===================================================================
+# SERVICENOW INTEGRATION CONFIGURATION
+# ===================================================================
+
+# Enable ServiceNow ticket creation for expiring certificates
+enable_servicenow_integration = true
+
+# ServiceNow credentials stored in Secrets Manager
+servicenow_secret_name = "cert-management/servicenow/credentials"
+servicenow_secret_arn  = "arn:aws:secretsmanager:eu-west-1:992155623828:secret:cert-management/servicenow/credentials-agnpGG"
+
+# DRY-RUN MODE - Re-enabled due to OAuth authentication issues
+# Production mode requires valid ServiceNow OAuth credentials
+servicenow_dry_run = "true"
+
+# Enable automatic daily execution
+servicenow_enable_schedule = true
+
+# Run at 9:05 AM UTC daily (5 minutes after certificate monitor)
+servicenow_schedule = "cron(5 9 * * ? *)"
+
+# Disable CloudWatch alarms initially (enable after testing)
+servicenow_enable_alarms = false
+

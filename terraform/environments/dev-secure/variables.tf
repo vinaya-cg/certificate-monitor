@@ -85,5 +85,51 @@ variable "api_throttling_burst_limit" {
 variable "api_throttling_rate_limit" {
   description = "API Gateway throttling rate limit (requests per second)"
   type        = number
-  default     = 2000
+  default     = 100
+}
+
+# ===================================================================
+# SERVICENOW INTEGRATION CONFIGURATION
+# ===================================================================
+
+variable "enable_servicenow_integration" {
+  description = "Enable ServiceNow ticket creation for expiring certificates"
+  type        = bool
+  default     = false  # Disabled by default - enable when ready
+}
+
+variable "servicenow_secret_name" {
+  description = "Name of Secrets Manager secret containing ServiceNow credentials"
+  type        = string
+  default     = "cert-management/servicenow/credentials"
+}
+
+variable "servicenow_secret_arn" {
+  description = "ARN of Secrets Manager secret containing ServiceNow credentials"
+  type        = string
+  default     = ""  # Will be populated after secret creation
+}
+
+variable "servicenow_dry_run" {
+  description = "Enable dry-run mode (no actual ServiceNow tickets created)"
+  type        = string
+  default     = "true"  # Start in dry-run mode for safety
+}
+
+variable "servicenow_enable_schedule" {
+  description = "Enable automatic scheduled execution for ServiceNow ticket creation"
+  type        = bool
+  default     = true
+}
+
+variable "servicenow_schedule" {
+  description = "Schedule expression for ServiceNow ticket creation (5 min after cert monitor)"
+  type        = string
+  default     = "cron(5 9 * * ? *)"  # Daily at 9:05 AM UTC
+}
+
+variable "servicenow_enable_alarms" {
+  description = "Enable CloudWatch alarms for ServiceNow integration monitoring"
+  type        = bool
+  default     = false  # Disable initially, enable after testing
 }

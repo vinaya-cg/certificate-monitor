@@ -265,6 +265,34 @@ module "acm_sync" {
 }
 
 # ===================================================================
+# SERVICENOW INTEGRATION MODULE (Optional - Feature Flag Controlled)
+# ===================================================================
+
+module "servicenow_integration" {
+  count  = var.enable_servicenow_integration ? 1 : 0
+  source = "../../modules/lambda_servicenow"
+
+  project_name               = var.project_name
+  common_tags                = local.common_tags
+  certificates_table_name    = module.database.certificates_table_name
+  certificates_table_arn     = module.database.certificates_table_arn
+  logs_table_name            = module.database.logs_table_name
+  logs_table_arn             = module.database.logs_table_arn
+  lambda_execution_role_arn  = module.iam.lambda_role_arn
+  lambda_execution_role_id   = module.iam.lambda_role_name
+  snow_secret_name           = var.servicenow_secret_name
+  snow_secret_arn            = var.servicenow_secret_arn
+  expiry_threshold_days      = var.expiry_threshold_days
+  dry_run                    = var.servicenow_dry_run
+  enable_scheduled_execution = var.servicenow_enable_schedule
+  schedule_expression        = var.servicenow_schedule
+  log_retention_days         = var.log_retention_days
+  enable_cloudwatch_alarms   = var.servicenow_enable_alarms
+
+  depends_on = [module.database, module.iam]
+}
+
+# ===================================================================
 # SECURE DASHBOARD MODULE (Auto-inject Cognito Config)
 # ===================================================================
 
