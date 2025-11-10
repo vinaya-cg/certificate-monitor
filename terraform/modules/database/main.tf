@@ -39,11 +39,30 @@ resource "aws_dynamodb_table" "certificates" {
     type = "S"
   }
 
+  # ACM Sync attributes
+  attribute {
+    name = "AccountNumber"
+    type = "S"
+  }
+
+  attribute {
+    name = "CommonName"
+    type = "S"
+  }
+
   # GSI for status-based queries
   global_secondary_index {
     name            = "StatusIndex"
     hash_key        = "Status"
     range_key       = "ExpiryDate"
+    projection_type = "ALL"
+  }
+
+  # GSI for ACM sync - Account + Domain lookup
+  global_secondary_index {
+    name            = "AccountNumber-DomainName-index"
+    hash_key        = "AccountNumber"
+    range_key       = "CommonName"
     projection_type = "ALL"
   }
 

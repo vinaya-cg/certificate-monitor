@@ -243,6 +243,27 @@ module "eventbridge" {
 }
 
 # ===================================================================
+# ACM SYNC MODULE (ACM Certificate Synchronization)
+# ===================================================================
+
+module "acm_sync" {
+  source = "../../modules/lambda_acm_sync"
+
+  project_name              = var.project_name
+  environment               = var.environment
+  aws_region                = data.aws_region.current.name
+  certificates_table_name   = module.database.certificates_table_name
+  certificates_table_arn    = module.database.certificates_table_arn
+  lambda_role_arn           = module.iam.lambda_role_arn
+  lambda_role_name          = module.iam.lambda_role_name
+  lambda_log_group_arn      = ""
+  log_retention_days        = var.log_retention_days
+  common_tags               = local.common_tags
+
+  depends_on = [module.database, module.iam]
+}
+
+# ===================================================================
 # SECURE DASHBOARD MODULE (Auto-inject Cognito Config)
 # ===================================================================
 

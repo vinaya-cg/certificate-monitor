@@ -36,11 +36,19 @@ def lambda_handler(event, context):
     # Get HTTP method - check multiple locations for compatibility
     http_method = event.get('httpMethod') or event.get('requestContext', {}).get('http', {}).get('method', 'GET')
     
+    # Get path for routing
+    path = event.get('path', event.get('rawPath', ''))
+    
     print(f"HTTP Method: {http_method}")
+    print(f"Path: {path}")
     print(f"Event: {json.dumps(event)}")
     
     try:
-        # Handle different HTTP methods
+        # Check if this is a sync-acm request
+        if 'sync-acm' in path and http_method == 'POST':
+            return handle_acm_sync(event)
+        
+        # Handle different HTTP methods for certificates
         if http_method == 'POST':
             return handle_add_certificate(event, table, logs_table)
         elif http_method == 'PUT':
@@ -316,3 +324,53 @@ def convert_decimal(obj):
     elif isinstance(obj, list):
         return [convert_decimal(item) for item in obj]
     return obj
+
+def handle_acm_sync(event):
+    """
+    Handle manual ACM sync trigger - invokes ACM sync Lambda function
+    This endpoint allows users to manually trigger ACM certificate synchronization
+    """
+    try:
+        # Get ACM sync Lambda function name from environment
+        acm_sync_function = os.environ.get('ACM_SYNC_FUNCTION', 'cert-management-dev-secure-acm-sync')
+        
+        print(f"Triggering manual ACM sync via Lambda: {acm_sync_function}")
+        
+        # Invoke ACM sync Lambda asynchronously
+        lambda_client = boto3.client('lambda')
+        
+        response = lambda_client.invoke(
+            FunctionName=acm_sync_function,
+            InvocationType='Event',  # Asynchronous invocation
+            Payload=json.dumps({
+                'httpMethod': 'POST',
+                'source': 'manual-trigger',
+                'triggeredBy': event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('email', 'unknown')
+            })
+        )
+        
+        print(f"ACM sync Lambda invoked. Status: {response['StatusCode']}")
+        
+        return {
+            'statusCode': 202,  # Accepted
+            'headers': CORS_HEADERS,
+            'body': json.dumps({
+                'success': True,
+                'message': 'ACM synchronization started',
+                'details': 'The sync process is running in the background. Check back in a few minutes to see new certificates.',
+                'function': acm_sync_function,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        }
+        
+    except Exception as e:
+        print(f"Error triggering ACM sync: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': CORS_HEADERS,
+            'body': json.dumps({
+                'error': 'Failed to trigger ACM sync',
+                'message': str(e)
+            })
+        }
+

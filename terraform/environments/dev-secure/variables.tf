@@ -41,6 +41,12 @@ variable "monitoring_schedule" {
   default     = "cron(0 9 * * ? *)"
 }
 
+variable "log_retention_days" {
+  description = "CloudWatch Logs retention period in days"
+  type        = number
+  default     = 30
+}
+
 # Cognito User Configuration
 variable "admin_user" {
   description = "Admin user configuration"
