@@ -48,6 +48,10 @@ def lambda_handler(event, context):
         if 'sync-acm' in path and http_method == 'POST':
             return handle_acm_sync(event)
         
+        # Check if this is a sync-server-certs request
+        if 'sync-server-certs' in path and http_method == 'POST':
+            return handle_server_cert_sync(event)
+        
         # Handle different HTTP methods for certificates
         if http_method == 'POST':
             return handle_add_certificate(event, table, logs_table)
@@ -370,6 +374,61 @@ def handle_acm_sync(event):
             'headers': CORS_HEADERS,
             'body': json.dumps({
                 'error': 'Failed to trigger ACM sync',
+                'message': str(e)
+            })
+        }
+
+
+def handle_server_cert_sync(event):
+    """
+    Handle manual server certificate sync trigger - invokes Server Scanner Lambda function
+    This endpoint allows users to manually trigger server certificate scanning
+    """
+    try:
+        # Get server scanner Lambda function name from environment
+        server_scanner_function = os.environ.get('SERVER_SCANNER_FUNCTION', 'cert-management-dev-secure-server-cert-scanner')
+        
+        print(f"Triggering manual server certificate scan via Lambda: {server_scanner_function}")
+        
+        # Invoke server scanner Lambda SYNCHRONOUSLY to get results
+        lambda_client = boto3.client('lambda')
+        
+        response = lambda_client.invoke(
+            FunctionName=server_scanner_function,
+            InvocationType='RequestResponse',  # SYNCHRONOUS invocation - wait for results
+            Payload=json.dumps({
+                'httpMethod': 'POST',
+                'source': 'manual-trigger',
+                'triggeredBy': event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('email', 'unknown')
+            })
+        )
+        
+        print(f"Server scanner Lambda response status: {response['StatusCode']}")
+        
+        # Parse Lambda response
+        if response['StatusCode'] == 200:
+            # Read and parse the response payload
+            payload = json.loads(response['Payload'].read())
+            print(f"Server scanner results: {json.dumps(payload)}")
+            
+            return {
+                'statusCode': 200,
+                'headers': CORS_HEADERS,
+                'body': json.dumps(payload)
+            }
+        else:
+            raise Exception(f"Server scanner returned status {response['StatusCode']}")
+        
+    except Exception as e:
+        print(f"Error triggering server certificate scan: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        return {
+            'statusCode': 500,
+            'headers': CORS_HEADERS,
+            'body': json.dumps({
+                'error': 'Failed to trigger server certificate scan',
                 'message': str(e)
             })
         }

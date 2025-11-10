@@ -41,7 +41,15 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 - **Role-Based Access Control**: Admin, Operator, and Viewer roles
 - **Infrastructure as Code**: 100% Terraform-managed AWS resources
 
-### Latest Features (v1.3.0)
+### Latest Features (v1.4.0)
+- 🖥️ **Server Certificate Sync**: Manual on-demand sync from Windows/Linux servers via SSM
+- 📊 **Real-time Server Scanning**: Visual modal shows scan progress and results
+- 🔍 **Cross-Platform Support**: Scans both Windows (certutil) and Linux (openssl) servers
+- ⚡ **Synchronous Execution**: Returns real-time results (30-60 seconds)
+- 🎯 **Smart Tagging**: Only scans EC2 instances tagged with `CertificateScanning=enabled`
+- 📈 **Platform Breakdown**: Shows Windows vs Linux server counts in results
+
+### Features (v1.3.0)
 - 🎫 **ServiceNow Ticket Creation**: Automated incident creation for expiring certificates (Production)
 - 🔄 **Webhook Integration**: Real-time certificate updates when engineers pick ServiceNow incidents (Ready)
 - ⚡ **Priority-Based Assignment**: Intelligent ticket prioritization (1-5 scale) based on expiry urgency
@@ -52,7 +60,7 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 ### Features (v1.2.0)
 - 🔄 **ACM Certificate Sync**: One-click sync from AWS Certificate Manager
 - 📊 **Real-time Progress Modal**: Visual feedback with certificate counts
-- ⏰ **Scheduled Daily Sync**: Automated sync at 2 AM UTC via EventBridge
+- ⏰ **Scheduled Daily Sync**: Automated sync at 9:00 AM UTC via EventBridge
 - 🎯 **Smart Updates**: Preserves manual data while updating ACM info
 - 📈 **Performance**: Syncs 64 certificates in ~6 seconds
 
@@ -144,7 +152,34 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 - **Expiry Notifications**: Email alerts via SES for certificates expiring within threshold
 - **CloudWatch Dashboard**: Real-time metrics for Lambda performance, DynamoDB capacity
 
-### � ServiceNow Integration
+### 🔄 Synchronization Features
+
+#### ACM Certificate Sync
+- **One-Click Sync**: Manual trigger via "Sync from ACM" button in dashboard
+- **Automated Daily Sync**: Scheduled sync at 9:00 AM UTC
+- **Real-time Progress**: Modal shows sync status and certificate counts
+- **Smart Updates**: Preserves manual fields (Owner, Priority, Notes) while updating ACM data
+- **Performance**: Syncs 60+ certificates in ~6 seconds
+
+#### Server Certificate Scan
+- **Manual On-Demand Sync**: Click "Sync from Servers" button for immediate scan
+- **Cross-Platform Support**: 
+  - Windows servers (certutil command)
+  - Linux servers (openssl command)
+- **SSM Integration**: Uses AWS Systems Manager to execute commands remotely
+- **Real-time Results**: Returns scan results in 30-60 seconds
+- **Detailed Metrics**:
+  - Servers scanned (total count)
+  - Certificates found
+  - New certificates added
+  - Platform breakdown (Windows vs Linux)
+  - Error count and details
+- **Smart Tagging**: Only scans EC2 instances with `CertificateScanning=enabled` tag
+- **Duplicate Prevention**: Won't create duplicate certificates (by ServerID + Thumbprint)
+- **Automated Daily Scan**: Optional scheduled scan at 9:30 AM UTC
+- **See**: `SERVER_SYNC_FEATURE.md` for detailed documentation
+
+### 🎫 ServiceNow Integration
 - **Automated Ticket Creation**: Daily scan creates incidents for expiring certificates (within 30 days)
 - **Priority-Based Assignment**: 
   - Priority 1 (Critical): Expired certificates
@@ -327,6 +362,8 @@ cert-dashboard/
 Comprehensive documentation is organized as follows:
 
 - **[README.md](README.md)** (this file) - Project overview and quick start
+- **[COMPLETE_DEPLOYMENT_GUIDE.md](COMPLETE_DEPLOYMENT_GUIDE.md)** - Complete step-by-step deployment guide
+- **[SERVER_SYNC_FEATURE.md](SERVER_SYNC_FEATURE.md)** - Server certificate scanning feature documentation
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design, components, data flow
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Step-by-step deployment, troubleshooting
 - **[WORKFLOW.md](WORKFLOW.md)** - Development processes, CI/CD, testing

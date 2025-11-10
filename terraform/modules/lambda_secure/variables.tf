@@ -71,3 +71,9 @@ variable "acm_sync_function_name" {
   description = "Name of the ACM sync Lambda function"
   type        = string
 }
+
+variable "server_scanner_function_name" {
+  description = "Name of the Server Certificate Scanner Lambda function"
+  type        = string
+  default     = ""
+}

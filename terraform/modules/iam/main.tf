@@ -92,13 +92,16 @@ resource "aws_iam_policy" "lambda_policy" {
         ]
         Resource = "*"
       },
-      # Lambda invoke permissions (for ACM sync)
+      # Lambda invoke permissions (for ACM sync and server scanner)
       {
         Effect = "Allow"
         Action = [
           "lambda:InvokeFunction"
         ]
-        Resource = "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${local.common_name}-acm-sync"
+        Resource = [
+          "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${local.common_name}-acm-sync",
+          "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${local.common_name}-server-cert-scanner"
+        ]
       }
     ]
   })

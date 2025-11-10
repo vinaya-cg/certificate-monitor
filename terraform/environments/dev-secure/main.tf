@@ -170,6 +170,7 @@ module "lambda_secure" {
   lambda_source_path         = "${path.module}/../../../lambda"
   api_gateway_execution_arn  = "arn:aws:execute-api:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*/*/*"
   acm_sync_function_name     = module.acm_sync.lambda_function_name
+  server_scanner_function_name = var.enable_server_certificate_scan ? module.server_certificate_scanner[0].lambda_function_name : ""
   common_tags                = local.common_tags
 
   depends_on = [module.iam, module.acm_sync]
@@ -311,6 +312,30 @@ module "servicenow_webhook" {
   webhook_secret_arn      = var.servicenow_webhook_secret_arn != "" ? var.servicenow_webhook_secret_arn : "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.servicenow_webhook_secret_name}-*"
   log_retention_days      = var.log_retention_days
   enable_alarms           = var.servicenow_enable_alarms
+
+  depends_on = [module.database, module.iam]
+}
+
+# ===================================================================
+# SERVER CERTIFICATE SCANNER MODULE (Windows & Linux - Optional)
+# ===================================================================
+
+module "server_certificate_scanner" {
+  count  = var.enable_server_certificate_scan ? 1 : 0
+  source = "../../modules/lambda_server_scanner"
+
+  project_name            = var.project_name
+  environment             = var.environment
+  aws_region              = data.aws_region.current.name
+  certificates_table_name = module.database.certificates_table_name
+  certificates_table_arn  = module.database.certificates_table_arn
+  lambda_role_arn         = module.iam.lambda_role_arn
+  lambda_role_name        = module.iam.lambda_role_name
+  
+  enable_scheduled_scan = true
+  scan_schedule         = var.server_scan_schedule
+  enable_alarms         = var.server_scan_enable_alarms
+  log_retention_days    = var.log_retention_days
 
   depends_on = [module.database, module.iam]
 }

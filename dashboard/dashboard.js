@@ -1598,6 +1598,134 @@ function showSuccess(message) {
     alert('Success: ' + message);
 }
 
+// ===================================================================
+// SERVER CERTIFICATE SYNC
+// ===================================================================
+
+async function triggerServerSync() {
+    console.log('triggerServerSync called');
+    
+    try {
+        // Get modal elements
+        const modal = document.getElementById('serverSyncModal');
+        const progressDiv = document.getElementById('serverSyncProgress');
+        const resultsDiv = document.getElementById('serverSyncResults');
+        const errorDiv = document.getElementById('serverSyncError');
+        const detailsDiv = document.getElementById('serverSyncDetails');
+        
+        // Reset modal state
+        if (progressDiv) progressDiv.style.display = 'block';
+        if (resultsDiv) resultsDiv.style.display = 'none';
+        if (errorDiv) errorDiv.style.display = 'none';
+        if (detailsDiv) detailsDiv.style.display = 'none';
+        
+        // Open modal
+        openModal('serverSyncModal');
+        
+        // Disable sync button
+        const syncBtn = document.getElementById('serverSyncBtn');
+        if (syncBtn) {
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+        }
+        
+        // Get auth headers
+        const headers = await getAuthHeaders();
+        
+        // Call server sync endpoint
+        console.log('Calling server sync API...');
+        const response = await fetch(`${API_BASE_URL}/sync-server-certs`, {
+            method: 'POST',
+            headers: headers
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server sync failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('Server sync response:', result);
+        
+        // Parse response
+        let syncData;
+        if (typeof result.body === 'string') {
+            syncData = JSON.parse(result.body);
+        } else {
+            syncData = result;
+        }
+        
+        // Show results
+        showServerSyncResults(
+            syncData.serversScanned || 0,
+            syncData.certificatesFound || 0,
+            syncData.certificatesAdded || 0,
+            syncData.errors?.length || 0,
+            syncData.windowsServers || 0,
+            syncData.linuxServers || 0
+        );
+        
+    } catch (error) {
+        console.error('Server sync error:', error);
+        
+        // Show error
+        const progressDiv = document.getElementById('serverSyncProgress');
+        const resultsDiv = document.getElementById('serverSyncResults');
+        const errorDiv = document.getElementById('serverSyncError');
+        const errorMsgDiv = document.getElementById('serverSyncErrorMessage');
+        
+        if (progressDiv) progressDiv.style.display = 'none';
+        if (resultsDiv) resultsDiv.style.display = 'none';
+        if (errorDiv) errorDiv.style.display = 'block';
+        if (errorMsgDiv) errorMsgDiv.textContent = error.message;
+        
+    } finally {
+        // Re-enable sync button
+        const syncBtn = document.getElementById('serverSyncBtn');
+        if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = '<i class="fas fa-server"></i> Sync from Servers';
+        }
+    }
+}
+
+function showServerSyncResults(scanned, found, added, errors, windows, linux) {
+    console.log('showServerSyncResults:', {scanned, found, added, errors, windows, linux});
+    
+    const progressDiv = document.getElementById('serverSyncProgress');
+    const errorDiv = document.getElementById('serverSyncError');
+    const resultsDiv = document.getElementById('serverSyncResults');
+    const detailsDiv = document.getElementById('serverSyncDetails');
+    
+    // Hide progress and error
+    if (progressDiv) progressDiv.style.display = 'none';
+    if (errorDiv) errorDiv.style.display = 'none';
+    
+    // Show results
+    if (resultsDiv) resultsDiv.style.display = 'block';
+    
+    // Update counts
+    const scannedEl = document.getElementById('serverSyncScanned');
+    const foundEl = document.getElementById('serverSyncFound');
+    const addedEl = document.getElementById('serverSyncAdded');
+    const errorsEl = document.getElementById('serverSyncErrors');
+    const windowsEl = document.getElementById('serverSyncWindows');
+    const linuxEl = document.getElementById('serverSyncLinux');
+    
+    if (scannedEl) scannedEl.textContent = scanned;
+    if (foundEl) foundEl.textContent = found;
+    if (addedEl) addedEl.textContent = added;
+    if (errorsEl) errorsEl.textContent = errors;
+    
+    // Show platform details if available
+    if (windows > 0 || linux > 0) {
+        if (windowsEl) windowsEl.textContent = windows;
+        if (linuxEl) linuxEl.textContent = linux;
+        if (detailsDiv) detailsDiv.style.display = 'block';
+    }
+    
+    console.log('Server sync results displayed');
+}
+
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0;

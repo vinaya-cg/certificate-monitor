@@ -239,6 +239,85 @@ resource "aws_api_gateway_integration_response" "options_sync_acm_200" {
   depends_on = [aws_api_gateway_integration.options_sync_acm]
 }
 
+# ==============================================================================
+# SYNC FROM SERVERS ENDPOINT
+# ==============================================================================
+
+resource "aws_api_gateway_resource" "sync_server_certs" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_rest_api.main.root_resource_id
+  path_part   = "sync-server-certs"
+}
+
+# POST /sync-server-certs - Trigger manual server certificate scan
+resource "aws_api_gateway_method" "post_sync_server_certs" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.sync_server_certs.id
+  http_method   = "POST"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+}
+
+resource "aws_api_gateway_integration" "post_sync_server_certs" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.sync_server_certs.id
+  http_method             = aws_api_gateway_method.post_sync_server_certs.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.dashboard_api_lambda_invoke_arn
+}
+
+# OPTIONS /sync-server-certs - CORS preflight
+resource "aws_api_gateway_method" "options_sync_server_certs" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.sync_server_certs.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "options_sync_server_certs" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.sync_server_certs.id
+  http_method = aws_api_gateway_method.options_sync_server_certs.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_sync_server_certs_200" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.sync_server_certs.id
+  http_method = aws_api_gateway_method.options_sync_server_certs.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_sync_server_certs_200" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.sync_server_certs.id
+  http_method = aws_api_gateway_method.options_sync_server_certs.http_method
+  status_code = aws_api_gateway_method_response.options_sync_server_certs_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options_sync_server_certs]
+}
+
 # Lambda Permission for API Gateway
 resource "aws_lambda_permission" "api_gateway" {
   statement_id  = "AllowExecutionFromAPIGateway"
@@ -256,16 +335,19 @@ resource "aws_api_gateway_deployment" "main" {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.certificates.id,
       aws_api_gateway_resource.sync_acm.id,
+      aws_api_gateway_resource.sync_server_certs.id,
       aws_api_gateway_method.get_certificates.id,
       aws_api_gateway_method.post_certificates.id,
       aws_api_gateway_method.put_certificates.id,
       aws_api_gateway_method.delete_certificates.id,
       aws_api_gateway_method.post_sync_acm.id,
+      aws_api_gateway_method.post_sync_server_certs.id,
       aws_api_gateway_integration.get_certificates.id,
       aws_api_gateway_integration.post_certificates.id,
       aws_api_gateway_integration.put_certificates.id,
       aws_api_gateway_integration.delete_certificates.id,
       aws_api_gateway_integration.post_sync_acm.id,
+      aws_api_gateway_integration.post_sync_server_certs.id,
     ]))
   }
 
@@ -278,7 +360,11 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.post_certificates,
     aws_api_gateway_integration.put_certificates,
     aws_api_gateway_integration.delete_certificates,
-    aws_api_gateway_integration.options_certificates
+    aws_api_gateway_integration.options_certificates,
+    aws_api_gateway_integration.post_sync_acm,
+    aws_api_gateway_integration.options_sync_acm,
+    aws_api_gateway_integration.post_sync_server_certs,
+    aws_api_gateway_integration.options_sync_server_certs
   ]
 }
 

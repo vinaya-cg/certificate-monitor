@@ -462,7 +462,10 @@
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
                 <button class="btn btn-info" onclick="triggerACMSync()" id="acmSyncBtn">
-                    <i class="fas fa-cloud-download-alt"></i> Sync from ACM v2
+                    <i class="fas fa-cloud-download-alt"></i> Sync from ACM
+                </button>
+                <button class="btn btn-success" onclick="triggerServerSync()" id="serverSyncBtn">
+                    <i class="fas fa-server"></i> Sync from Servers
                 </button>
                 <button class="btn btn-primary" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
@@ -733,10 +736,79 @@
         </div>
     </div>
 
+    <!-- Server Sync Status Modal -->
+    <div id="serverSyncModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-server"></i> Server Certificate Sync</h2>
+                <span class="close" onclick="closeModal('serverSyncModal')">&times;</span>
+            </div>
+            <div id="serverSyncContent" style="padding: 20px;">
+                <div id="serverSyncProgress" style="text-align: center; padding: 30px 20px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #28a745; margin-bottom: 20px;"></i>
+                    <h3 style="margin-bottom: 10px;">Scanning Servers...</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Connecting to Windows and Linux servers via AWS Systems Manager to discover certificates.</p>
+                    <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                        <p style="margin: 0; color: #555;">This may take 30-60 seconds depending on the number of servers.</p>
+                    </div>
+                </div>
+                <div id="serverSyncResults" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <i class="fas fa-check-circle" style="font-size: 64px; color: #28a745; margin-bottom: 15px;"></i>
+                        <h3 style="margin-bottom: 10px; color: #28a745;">Scan Complete!</h3>
+                    </div>
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #2196F3;" id="serverSyncScanned">0</div>
+                                <div style="color: #666; margin-top: 5px;">Servers Scanned</div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #FF9800;" id="serverSyncFound">0</div>
+                                <div style="color: #666; margin-top: 5px;">Certificates Found</div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #28a745;" id="serverSyncAdded">0</div>
+                                <div style="color: #666; margin-top: 5px;">New Certificates</div>
+                            </div>
+                            <div style="text-align: center; padding: 15px; background: white; border-radius: 6px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #f44336;" id="serverSyncErrors">0</div>
+                                <div style="color: #666; margin-top: 5px;">Errors</div>
+                            </div>
+                        </div>
+                        <div id="serverSyncDetails" style="margin-top: 20px; padding: 15px; background: white; border-radius: 6px; display: none;">
+                            <h4 style="margin-bottom: 10px; color: #333;">Scan Details:</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px;">
+                                <div><strong>Windows Servers:</strong> <span id="serverSyncWindows">0</span></div>
+                                <div><strong>Linux Servers:</strong> <span id="serverSyncLinux">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary" onclick="closeModal('serverSyncModal'); loadCertificates();">
+                            <i class="fas fa-sync"></i> Refresh Dashboard
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeModal('serverSyncModal')" style="margin-left: 10px;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+                <div id="serverSyncError" style="display: none; text-align: center; padding: 30px 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: #f44336; margin-bottom: 15px;"></i>
+                    <h3 style="margin-bottom: 10px; color: #f44336;">Scan Failed</h3>
+                    <p id="serverSyncErrorMessage" style="color: #666; margin-bottom: 20px;"></p>
+                    <button class="btn btn-secondary" onclick="closeModal('serverSyncModal')">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Cognito SDK -->
     <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6/dist/amazon-cognito-identity.min.js"></script>
     <script src="auth.js"></script>
-    <script src="dashboard.js?v=20251110-1525"></script>
+    <script src="dashboard.js?v=20251110-1645"></script>
     
     <script>
         // Protect page - require authentication
