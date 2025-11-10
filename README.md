@@ -105,11 +105,19 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 - **Credential Management**: Secure password policies (8 chars, complexity requirements)
 
 ### 📊 Certificate Management
-- **CRUD Operations**: Create, Read, Update, Delete certificates
-- **Search & Filter**: By status, environment, owner, expiry date
-- **Bulk Import**: Excel file upload with automatic parsing
-- **Status Tracking**: Active, Expired, Expiring Soon, Revoked
-- **Audit Logging**: All operations logged to DynamoDB
+- **CRUD Operations**: Create, Read, Update, Delete certificates via dashboard or API
+- **Advanced Search & Filter**: 
+  - Text search by certificate name, application, owner
+  - Status filter (Active, Expired, Due for Renewal, etc.)
+  - Environment filter (Production, Staging, Development, etc.)
+  - **Date Range Filter**: Filter by certificate expiry date (From/To dates)
+- **Bulk Import**: Excel file upload (.xlsx, .xls) with automatic parsing and validation
+- **Smart Export**: 
+  - Export filtered certificates to CSV
+  - Filename includes applied filters for easy identification
+  - CSV includes summary header with filter details and export metadata
+- **Status Tracking**: Active, Expired, Due for Renewal, Renewal in Progress, Revoked
+- **Audit Logging**: All operations logged to DynamoDB with timestamps
 
 ### 🔔 Automated Monitoring
 - **Daily Scans**: EventBridge triggers Lambda function at 9 AM UTC
@@ -117,10 +125,16 @@ This project provides a complete solution for monitoring SSL/TLS certificates ac
 - **CloudWatch Dashboard**: Real-time metrics for Lambda performance, DynamoDB capacity
 
 ### 🌐 User Interface
-- **Responsive Design**: Works on desktop, tablet, mobile
-- **Real-time Validation**: Password strength, form inputs
-- **Professional UI**: Sogeti/PostNL branding with modern styling
+- **Responsive Design**: Works on desktop, tablet, mobile devices
+- **Real-time Validation**: Password strength indicators, form input validation
+- **Advanced Filtering**:
+  - Multi-criteria search (text, status, environment)
+  - Date range picker for expiry date filtering
+  - Clear filters with one click
+- **Data Export**: Export filtered results to CSV with smart naming and summary headers
+- **Professional UI**: Sogeti/PostNL branding with modern, intuitive styling
 - **Password Management**: Secure password change with complexity requirements
+- **Excel Upload**: Drag-and-drop or click to upload certificate data in bulk
 
 ## Prerequisites
 

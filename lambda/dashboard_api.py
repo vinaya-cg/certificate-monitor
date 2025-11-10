@@ -6,14 +6,21 @@ from decimal import Decimal
 from datetime import datetime, date
 
 # Get table names from environment variables
-CERTIFICATES_TABLE = os.environ.get('CERTIFICATES_TABLE', 'cert-management-dev-certificates')
+CERTIFICATES_TABLE = os.environ.get('CERTIFICATES_TABLE', 'cert-management-dev-secure-certificates')
+
+# CORS headers for all responses
+CORS_HEADERS = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+}
 
 def lambda_handler(event, context):
     """
     API to fetch and add certificates for the dashboard
     
-    NOTE: CORS headers are handled by Lambda Function URL configuration in Terraform.
-    DO NOT add CORS headers in the Lambda response - it will cause duplicate header errors!
+    NOTE: When using AWS_PROXY integration with API Gateway, Lambda MUST return CORS headers.
     
     Supports:
     - GET: Fetch all certificates
@@ -26,8 +33,11 @@ def lambda_handler(event, context):
     table = dynamodb.Table(CERTIFICATES_TABLE)
     logs_table = dynamodb.Table(f"{CERTIFICATES_TABLE.rsplit('-', 1)[0]}-certificate-logs")
     
-    # Get HTTP method
-    http_method = event.get('requestContext', {}).get('http', {}).get('method', 'GET')
+    # Get HTTP method - check multiple locations for compatibility
+    http_method = event.get('httpMethod') or event.get('requestContext', {}).get('http', {}).get('method', 'GET')
+    
+    print(f"HTTP Method: {http_method}")
+    print(f"Event: {json.dumps(event)}")
     
     try:
         # Handle different HTTP methods
@@ -43,7 +53,10 @@ def lambda_handler(event, context):
         return {
             'statusCode': 500,
             'headers': {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
             'body': json.dumps({
                 'error': 'Request failed',
@@ -73,17 +86,17 @@ def handle_get_certificates(table):
         # Convert all certificates
         json_certificates = convert_decimal(certificates)
         
-        # Return response WITHOUT CORS headers (handled by Lambda Function URL config)
+        # Return response WITH CORS headers (required for AWS_PROXY integration)
+        # Return just the array of certificates (dashboard expects array, not wrapped object)
         return {
             'statusCode': 200,
             'headers': {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
-            'body': json.dumps({
-                'certificates': json_certificates,
-                'count': len(certificates),
-                'timestamp': datetime.utcnow().isoformat() + 'Z'
-            })
+            'body': json.dumps(json_certificates)
         }
         
     except Exception as e:
@@ -91,7 +104,10 @@ def handle_get_certificates(table):
         return {
             'statusCode': 500,
             'headers': {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
             'body': json.dumps({
                 'error': 'Failed to fetch certificates',
@@ -112,7 +128,7 @@ def handle_add_certificate(event, table, logs_table):
         if missing_fields:
             return {
                 'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
+                'headers': CORS_HEADERS,
                 'body': json.dumps({
                     'error': 'Missing required fields',
                     'missing': missing_fields
@@ -167,7 +183,7 @@ def handle_add_certificate(event, table, logs_table):
         
         return {
             'statusCode': 201,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'success': True,
                 'message': 'Certificate added successfully',
@@ -179,7 +195,7 @@ def handle_add_certificate(event, table, logs_table):
         print(f"Error adding certificate: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'error': 'Failed to add certificate',
                 'message': str(e)
@@ -196,7 +212,7 @@ def handle_update_certificate(event, table, logs_table):
         if not cert_id:
             return {
                 'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
+                'headers': CORS_HEADERS,
                 'body': json.dumps({'error': 'CertificateID is required'})
             }
         
@@ -245,7 +261,7 @@ def handle_update_certificate(event, table, logs_table):
         
         return {
             'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'success': True,
                 'message': 'Certificate updated successfully'
@@ -256,7 +272,7 @@ def handle_update_certificate(event, table, logs_table):
         print(f"Error updating certificate: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': CORS_HEADERS,
             'body': json.dumps({
                 'error': 'Failed to update certificate',
                 'message': str(e)

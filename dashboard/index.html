@@ -450,11 +450,19 @@
         <div class="header-content">
             <h1><i class="fas fa-shield-alt"></i> Certificate Management Dashboard</h1>
             <div class="header-actions">
+                <span id="userInfo" style="margin-right: 15px; color: white; font-size: 14px;"></span>
                 <button class="btn btn-primary" onclick="openModal('addCertModal')">
                     <i class="fas fa-plus"></i> Add Certificate
                 </button>
+                <button class="btn btn-success" onclick="document.getElementById('excelFileInput').click()">
+                    <i class="fas fa-file-excel"></i> Upload Excel
+                </button>
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls" style="display: none;" onchange="handleExcelUpload(event)">
                 <button class="btn btn-primary" onclick="refreshData()">
                     <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-primary" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
             </div>
         </div>
@@ -488,6 +496,15 @@
         <!-- Controls -->
         <div class="controls">
             <input type="text" class="search-box" id="searchBox" placeholder="Search certificates..." onkeyup="filterCertificates()">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="font-size: 14px; color: #666; white-space: nowrap;">Expiry Date Range:</label>
+                <input type="date" class="filter-select" id="fromDate" onchange="filterCertificates()" placeholder="From Date" style="width: 150px;">
+                <span style="color: #666;">to</span>
+                <input type="date" class="filter-select" id="toDate" onchange="filterCertificates()" placeholder="To Date" style="width: 150px;">
+                <button class="btn btn-secondary" onclick="clearDateRange()" title="Clear date range">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
             <select class="filter-select" id="statusFilter" onchange="filterCertificates()">
                 <option value="">All Statuses</option>
                 <option value="Active">Active</option>
@@ -500,7 +517,7 @@
                 <option value="">All Environments</option>
             </select>
             <button class="btn btn-primary" onclick="exportData()">
-                <i class="fas fa-download"></i> Export
+                <i class="fas fa-download"></i> Export Filtered
             </button>
         </div>
 
@@ -651,6 +668,55 @@
         </div>
     </div>
 
+    <!-- Cognito SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6/dist/amazon-cognito-identity.min.js"></script>
+    <script src="auth.js"></script>
     <script src="dashboard.js?v=20251029-1630"></script>
+    
+    <script>
+        // Protect page - require authentication
+        window.addEventListener('load', async function() {
+            // Check authentication
+            if (!await isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Get user info and display
+            try {
+                const user = await getCurrentUser();
+                const userInfoEl = document.getElementById('userInfo');
+                
+                if (userInfoEl && user) {
+                    const role = user.groups && user.groups.length > 0 ? user.groups[0].replace('cert-management-dev-secure-', '') : 'User';
+                    userInfoEl.innerHTML = `<i class="fas fa-user-circle"></i> ${user.name || user.email} (${role})`;
+                    
+                    // Adjust UI based on permissions
+                    if (user.groups && user.groups.includes('cert-management-dev-secure-viewers')) {
+                        // Viewers: Hide add/edit/delete buttons
+                        const addBtn = document.querySelector('button[onclick="openModal(\'addCertModal\')"]');
+                        if (addBtn) addBtn.style.display = 'none';
+                        
+                        // Will hide action buttons in table via dashboard.js
+                        window.CURRENT_USER_ROLE = 'viewer';
+                    } else if (user.groups && user.groups.includes('cert-management-dev-secure-operators')) {
+                        window.CURRENT_USER_ROLE = 'operator';
+                    } else {
+                        window.CURRENT_USER_ROLE = 'admin';
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting user info:', error);
+            }
+        });
+        
+        // Logout function
+        async function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                await signOut();
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
 </body>
 </html>

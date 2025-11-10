@@ -1,7 +1,10 @@
 // Certificate Management Dashboard - JavaScript
 // API Configuration
 // This URL will be replaced during Terraform deployment
-const API_URL = '${LAMBDA_FUNCTION_URL}';
+// Certificate Management Dashboard - JavaScript
+// API Configuration
+// This URL will be replaced during Terraform deployment
+const API_URL = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure/certificates';
 
 // Configuration (these will be populated from environment variables)
 let API_CONFIG = {
@@ -19,6 +22,22 @@ let filteredCertificates = [];
 let currentEditingCert = null;
 let currentSortColumn = null;
 let currentSortDirection = 'asc';
+
+// Helper function to get authentication headers
+async function getAuthHeaders() {
+    try {
+        const token = await getIdToken();
+        return {
+            'Authorization': token,  // Send token directly without "Bearer" prefix
+            'Content-Type': 'application/json'
+        };
+    } catch (error) {
+        console.error('Error getting auth token:', error);
+        // Redirect to login if token retrieval fails
+        window.location.href = 'login.html';
+        throw error;
+    }
+}
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', function() {
@@ -95,21 +114,37 @@ async function fetchCertificatesFromAPI() {
     // Call the actual DynamoDB API to get real certificate data
     try {
         console.log('Fetching certificates from API...');
+        const headers = await getAuthHeaders();
+        
         const response = await fetch(API_URL, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: headers
         });
+        
+        if (response.status === 401 || response.status === 403) {
+            console.error('Authentication failed, redirecting to login...');
+            window.location.href = 'login.html';
+            return [];
+        }
         
         if (!response.ok) {
             throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
-        console.log(`Loaded ${data.count} certificates from DynamoDB`);
         
-        return data.certificates || [];
+        // Lambda returns plain array, not wrapped object
+        if (Array.isArray(data)) {
+            console.log(`Loaded ${data.length} certificates from API`);
+            return data;
+        } else if (data.certificates && Array.isArray(data.certificates)) {
+            // Fallback for wrapped response
+            console.log(`Loaded ${data.certificates.length} certificates from API`);
+            return data.certificates;
+        } else {
+            console.error('Unexpected API response format:', data);
+            return [];
+        }
         
     } catch (error) {
         console.error('Error fetching certificates:', error);
@@ -200,7 +235,6 @@ function renderCertificatesTable() {
     console.log('renderCertificatesTable: Creating rows for', filteredCertificates.length, 'certificates');
     
     filteredCertificates.forEach((cert, index) => {
-        console.log(`renderCertificatesTable: Creating row ${index + 1} for:`, cert.CertificateName);
         const row = createCertificateRow(cert);
         tbody.appendChild(row);
     });
@@ -221,7 +255,7 @@ function createCertificateRow(cert) {
     
     row.innerHTML = `
         <td>
-            <strong>${cert.CertificateName}</strong>
+            <strong>${cert.CommonName || cert.CertificateName}</strong>
             ${cert.Type ? `<br><small style="color: #666;">${cert.Type}</small>` : ''}
         </td>
         <td>
@@ -336,20 +370,48 @@ function filterCertificates() {
     const searchTerm = document.getElementById('searchBox').value.toLowerCase();
     const statusFilter = document.getElementById('statusFilter').value;
     const environmentFilter = document.getElementById('environmentFilter').value;
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
     
     filteredCertificates = allCertificates.filter(cert => {
+        const certName = cert.CommonName || cert.CertificateName || '';
         const matchesSearch = !searchTerm || 
-            cert.CertificateName.toLowerCase().includes(searchTerm) ||
-            cert.Application.toLowerCase().includes(searchTerm) ||
-            cert.OwnerEmail.toLowerCase().includes(searchTerm);
+            certName.toLowerCase().includes(searchTerm) ||
+            (cert.Application || '').toLowerCase().includes(searchTerm) ||
+            (cert.OwnerEmail || '').toLowerCase().includes(searchTerm);
         
         const matchesStatus = !statusFilter || cert.Status === statusFilter;
         const matchesEnvironment = !environmentFilter || cert.Environment === environmentFilter;
         
-        return matchesSearch && matchesStatus && matchesEnvironment;
+        // Date range filtering based on ExpiryDate
+        let matchesDateRange = true;
+        if (fromDate || toDate) {
+            const certExpiryDate = cert.ExpiryDate ? new Date(cert.ExpiryDate) : null;
+            if (certExpiryDate) {
+                if (fromDate) {
+                    const from = new Date(fromDate);
+                    matchesDateRange = matchesDateRange && certExpiryDate >= from;
+                }
+                if (toDate) {
+                    const to = new Date(toDate);
+                    to.setHours(23, 59, 59, 999); // Include the entire day
+                    matchesDateRange = matchesDateRange && certExpiryDate <= to;
+                }
+            } else {
+                matchesDateRange = false; // Exclude certificates without expiry date when date filter is active
+            }
+        }
+        
+        return matchesSearch && matchesStatus && matchesEnvironment && matchesDateRange;
     });
     
     renderCertificatesTable();
+}
+
+function clearDateRange() {
+    document.getElementById('fromDate').value = '';
+    document.getElementById('toDate').value = '';
+    filterCertificates();
 }
 
 function populateEnvironmentFilter() {
@@ -396,8 +458,8 @@ function sortTable(column) {
         
         switch(column) {
             case 'CertificateName':
-                aValue = a.CertificateName || '';
-                bValue = b.CertificateName || '';
+                aValue = a.CommonName || a.CertificateName || '';
+                bValue = b.CommonName || b.CertificateName || '';
                 break;
             case 'Environment':
                 aValue = a.Environment || '';
@@ -516,6 +578,7 @@ async function handleCertificateSubmit(event) {
     event.preventDefault();
     
     const formData = {
+        CommonName: document.getElementById('certName').value,
         CertificateName: document.getElementById('certName').value,
         Environment: document.getElementById('certEnvironment').value,
         Application: document.getElementById('certApplication').value,
@@ -576,16 +639,22 @@ async function addNewCertificate(certData) {
     
     // Call the API to add certificate to DynamoDB
     try {
+        const headers = await getAuthHeaders();
+        
         const response = await fetch(API_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify(newCert)
         });
         
         console.log('Response status:', response.status);
         console.log('Response ok:', response.ok);
+        
+        if (response.status === 401 || response.status === 403) {
+            console.error('Authentication failed, redirecting to login...');
+            window.location.href = 'login.html';
+            return null;
+        }
         
         const result = await response.json();
         console.log('Response data:', result);
@@ -626,13 +695,19 @@ async function updateCertificate(certId, certData) {
     
     // Call the API to update certificate in DynamoDB
     try {
+        const headers = await getAuthHeaders();
+        
         const response = await fetch(API_URL, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify(updateData)
         });
+        
+        if (response.status === 401 || response.status === 403) {
+            console.error('Authentication failed, redirecting to login...');
+            window.location.href = 'login.html';
+            return null;
+        }
         
         const result = await response.json();
         
@@ -655,7 +730,7 @@ function editCertificate(certId) {
     currentEditingCert = cert;
     
     // Populate form
-    document.getElementById('certName').value = cert.CertificateName || '';
+    document.getElementById('certName').value = cert.CommonName || cert.CertificateName || '';
     document.getElementById('certEnvironment').value = cert.Environment || '';
     document.getElementById('certApplication').value = cert.Application || '';
     document.getElementById('certExpiryDate').value = cert.ExpiryDate || '';
@@ -740,7 +815,7 @@ function startRenewal(certId) {
     
     // Confirm renewal action
     const confirmMessage = `Start renewal process for:\n\n` +
-                          `Certificate: ${cert.CertificateName}\n` +
+                          `Certificate: ${cert.CommonName || cert.CertificateName}\n` +
                           `Environment: ${cert.Environment}\n` +
                           `Current Status: ${cert.Status}\n` +
                           `Expiry Date: ${formatDate(cert.ExpiryDate)}\n\n` +
@@ -774,13 +849,19 @@ async function updateCertificateStatus(certId, newStatus, notes = '') {
         
         console.log('Updating certificate status:', updatePayload);
         
+        const headers = await getAuthHeaders();
+        
         const response = await fetch(API_URL, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
             body: JSON.stringify(updatePayload)
         });
+        
+        if (response.status === 401 || response.status === 403) {
+            console.error('Authentication failed, redirecting to login...');
+            window.location.href = 'login.html';
+            return;
+        }
         
         if (!response.ok) {
             const errorData = await response.text();
@@ -815,7 +896,7 @@ function renewCertificate(certId) {
     }
     
     // Pre-populate certificate information
-    document.getElementById('renewalCertName').textContent = cert.CertificateName;
+    document.getElementById('renewalCertName').textContent = cert.CommonName || cert.CertificateName;
     document.getElementById('renewalCurrentExpiry').textContent = formatDate(cert.ExpiryDate);
     document.getElementById('renewalEnvironment').textContent = cert.Environment;
     
@@ -1044,18 +1125,239 @@ function updateProgressBar(percentage) {
 // ===================================================================
 // UTILITY FUNCTIONS
 // ===================================================================
+// EXCEL UPLOAD FUNCTIONALITY
+// ===================================================================
+
+async function handleExcelUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        showError('Please upload a valid Excel file (.xlsx or .xls)');
+        return;
+    }
+    
+    showLoading(true);
+    
+    try {
+        // Load SheetJS library dynamically if not already loaded
+        if (typeof XLSX === 'undefined') {
+            await loadSheetJSLibrary();
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Get first sheet
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                
+                // Convert to JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                if (jsonData.length === 0) {
+                    showError('Excel file is empty');
+                    showLoading(false);
+                    return;
+                }
+                
+                console.log(`Parsed ${jsonData.length} rows from Excel`);
+                
+                // Process and upload certificates
+                await uploadCertificatesFromExcel(jsonData);
+                
+                // Clear file input
+                event.target.value = '';
+                
+            } catch (error) {
+                console.error('Error parsing Excel:', error);
+                showError('Failed to parse Excel file: ' + error.message);
+                showLoading(false);
+            }
+        };
+        
+        reader.readAsArrayBuffer(file);
+        
+    } catch (error) {
+        console.error('Error handling Excel upload:', error);
+        showError('Failed to process Excel file: ' + error.message);
+        showLoading(false);
+    }
+}
+
+async function loadSheetJSLibrary() {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+async function uploadCertificatesFromExcel(certificates) {
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+    
+    console.log('Starting bulk upload of certificates...');
+    
+    for (let i = 0; i < certificates.length; i++) {
+        const cert = certificates[i];
+        
+        try {
+            // Map Excel columns to certificate fields
+            const certificateData = {
+                CertificateID: generateUUID(),
+                CommonName: cert['Certificate Name'] || cert['CommonName'] || cert['Name'],
+                Environment: cert['Environment'] || 'Production',
+                Application: cert['Application'] || '',
+                Status: cert['Status'] || 'Active',
+                ExpiryDate: formatExcelDate(cert['Expiry Date'] || cert['ExpiryDate']),
+                OwnerEmail: cert['Owner Email'] || cert['OwnerEmail'] || '',
+                SupportEmail: cert['Support Email'] || cert['SupportEmail'] || '',
+                Type: cert['Type'] || 'SSL',
+                AccountNumber: cert['Account Number'] || cert['AccountNumber'] || '',
+                CreatedAt: new Date().toISOString(),
+                UpdatedAt: new Date().toISOString()
+            };
+            
+            // Validate required fields
+            if (!certificateData.CommonName) {
+                throw new Error('Missing Certificate Name');
+            }
+            if (!certificateData.ExpiryDate) {
+                throw new Error('Missing Expiry Date');
+            }
+            
+            // Send POST request to API
+            const headers = await getAuthHeaders();
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(certificateData)
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            successCount++;
+            console.log(`Uploaded certificate ${i + 1}/${certificates.length}: ${certificateData.CommonName}`);
+            
+        } catch (error) {
+            failCount++;
+            const errorMsg = `Row ${i + 2}: ${error.message}`;
+            errors.push(errorMsg);
+            console.error(errorMsg);
+        }
+    }
+    
+    showLoading(false);
+    
+    // Show summary
+    let message = `Upload Complete!\n\n`;
+    message += `✅ Successfully uploaded: ${successCount}\n`;
+    message += `❌ Failed: ${failCount}\n`;
+    
+    if (errors.length > 0 && errors.length <= 10) {
+        message += `\nErrors:\n${errors.join('\n')}`;
+    } else if (errors.length > 10) {
+        message += `\nFirst 10 errors:\n${errors.slice(0, 10).join('\n')}\n... and ${errors.length - 10} more`;
+    }
+    
+    if (successCount > 0) {
+        showSuccess(message);
+        // Reload certificates to show newly uploaded ones
+        loadCertificates();
+    } else {
+        showError(message);
+    }
+}
+
+function formatExcelDate(dateValue) {
+    if (!dateValue) return '';
+    
+    // If it's already a string in ISO format, return it
+    if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return dateValue.split('T')[0];
+    }
+    
+    // If it's an Excel serial number (number of days since 1900-01-01)
+    if (typeof dateValue === 'number') {
+        const excelEpoch = new Date(1899, 11, 30);
+        const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+        return date.toISOString().split('T')[0];
+    }
+    
+    // Try to parse as date string
+    try {
+        const date = new Date(dateValue);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+        }
+    } catch (e) {
+        console.error('Failed to parse date:', dateValue);
+    }
+    
+    return '';
+}
+
+// ===================================================================
 
 function refreshData() {
     loadCertificates();
 }
 
 function exportData() {
-    // Create CSV content
+    // Get current filter values for filename
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const environmentFilter = document.getElementById('environmentFilter').value;
+    
+    // Build filename with filter info
+    let filename = 'certificates_export';
+    if (fromDate && toDate) {
+        filename += `_${fromDate}_to_${toDate}`;
+    } else if (fromDate) {
+        filename += `_from_${fromDate}`;
+    } else if (toDate) {
+        filename += `_until_${toDate}`;
+    }
+    if (statusFilter) {
+        filename += `_${statusFilter.replace(/\s+/g, '_')}`;
+    }
+    if (environmentFilter) {
+        filename += `_${environmentFilter}`;
+    }
+    filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    // Create CSV content with enhanced headers
     const headers = ['Certificate Name', 'Environment', 'Application', 'Status', 'Expiry Date', 'Days Left', 'Owner Email', 'Support Email', 'Type', 'Account Number'];
+    
+    // Add summary row
+    const summary = [
+        `"Total Certificates: ${filteredCertificates.length}"`,
+        `"Date Range: ${fromDate || 'N/A'} to ${toDate || 'N/A'}"`,
+        `"Status Filter: ${statusFilter || 'All'}"`,
+        `"Environment Filter: ${environmentFilter || 'All'}"`,
+        `"Export Date: ${new Date().toLocaleString()}"`,
+        '', '', '', '', ''
+    ].join(',');
+    
     const csvContent = [
+        summary,
+        '', // Empty row
         headers.join(','),
         ...filteredCertificates.map(cert => [
-            cert.CertificateName,
+            cert.CommonName || cert.CertificateName,
             cert.Environment,
             cert.Application,
             cert.Status,
@@ -1073,11 +1375,14 @@ function exportData() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `certificates_export_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+    
+    // Show success message
+    showSuccess(`Exported ${filteredCertificates.length} certificates to ${filename}`);
 }
 
 function viewLogs(certId) {
