@@ -259,10 +259,18 @@ def process_ticket_creation(certificates):
             logger.info(f"Successfully created ticket {incident_number} for {cert_name}")
             
         except Exception as e:
-            error_msg = f"Failed to create ticket for {cert.get('CertificateName')}: {str(e)}"
-            logger.error(error_msg)
-            results['failed'] += 1
-            results['errors'].append(error_msg)
+            error_str = str(e)
+            
+            # Handle duplicate tickets specially - they're not really failures
+            if error_str.startswith('DUPLICATE:'):
+                logger.warning(f"Skipping duplicate ticket for {cert.get('CertificateName')}: {error_str}")
+                results['skipped'] += 1
+                # Don't add to errors list for duplicates
+            else:
+                error_msg = f"Failed to create ticket for {cert.get('CertificateName')}: {error_str}"
+                logger.error(error_msg)
+                results['failed'] += 1
+                results['errors'].append(error_msg)
     
     return results
 
@@ -376,7 +384,7 @@ def create_servicenow_ticket(certificate, snow_creds):
     
     incident_data = {
         'interface': 'incident',
-        'sender': 'certificate_monitoring',
+        'sender': 'azure_monitoring',  # Use existing registered environment identifier
         'short_description': short_description,
         'description': description,
         'caller': snow_creds.get('caller', snow_creds['username']),
@@ -414,15 +422,47 @@ def create_servicenow_ticket(certificate, snow_creds):
             timeout=30
         )
         
-        if response.status == 201:
+        # ServiceNow returns 200 (not 201) for successful ticket creation
+        if response.status == 200 or response.status == 201:
             incident_response = json.loads(response.data.decode('utf-8'))
-            incident_number = incident_response.get('result', {}).get('number')
             
-            if not incident_number:
-                raise Exception("No incident number in response")
+            # ServiceNow API returns: {"result": {"success": [{"number": "INC0123456", ...}], "error": [...]}}
+            result = incident_response.get('result', {})
             
-            logger.info(f"Successfully created incident: {incident_number}")
-            return incident_number
+            # Check for success array
+            success_list = result.get('success', [])
+            if success_list and len(success_list) > 0:
+                incident_number = success_list[0].get('number')
+                if incident_number:
+                    logger.info(f"Successfully created incident: {incident_number}")
+                    return incident_number
+            
+            # Check for errors (e.g., duplicate ticket - 409)
+            error_list = result.get('error', [])
+            if error_list and len(error_list) > 0:
+                error_detail = error_list[0]
+                error_code = error_detail.get('code', 'unknown')
+                error_status = error_detail.get('status', 0)
+                error_message = error_detail.get('detail', 'Unknown error')
+                
+                # If it's a duplicate (409), this is not fatal - ticket already exists
+                if error_status == 409 and error_code == 'record.exists':
+                    logger.warning(f"Ticket already exists for this certificate (correlation_id match): {error_message}")
+                    # Try to find existing ticket number from error details if available
+                    # For now, return None to indicate duplicate - calling code should handle this
+                    raise Exception(f"DUPLICATE: {error_message}")
+                
+                # Other errors are fatal
+                raise Exception(f"ServiceNow API error {error_status} ({error_code}): {error_message}")
+            
+            # Fallback to direct number field (if API format is different)
+            incident_number = result.get('number')
+            if incident_number:
+                logger.info(f"Successfully created incident: {incident_number}")
+                return incident_number
+            
+            # No incident number and no error - unexpected response format
+            raise Exception(f"Unexpected response format - no incident number or error: {response.data.decode('utf-8')}")
         else:
             error_msg = f"ServiceNow API returned status {response.status}: {response.data.decode('utf-8')}"
             logger.error(error_msg)
