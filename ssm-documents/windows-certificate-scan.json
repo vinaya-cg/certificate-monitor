@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Fetch certificates from Windows servers (CurrentUser and LocalMachine Personal stores)",
+  "mainSteps": [
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "fetchCertificates",
+      "inputs": {
+        "runCommand": [
+          "$stores = @('Cert:\\CurrentUser\\My', 'Cert:\\LocalMachine\\My')",
+          "$results = @()",
+          "",
+          "foreach ($store in $stores) {",
+          "    Write-Output \"Scanning store: $store\"",
+          "    try {",
+          "        $certs = Get-ChildItem -Path $store -ErrorAction SilentlyContinue",
+          "        foreach ($cert in $certs) {",
+          "            Write-Output \"Subject     : $($cert.Subject)\"",
+          "            Write-Output \"Issuer      : $($cert.Issuer)\"",
+          "            Write-Output \"Valid From  : $($cert.NotBefore)\"",
+          "            Write-Output \"Valid Until : $($cert.NotAfter)\"",
+          "            Write-Output \"Thumbprint  : $($cert.Thumbprint)\"",
+          "            Write-Output \"Has Private Key: $($cert.HasPrivateKey)\"",
+          "            Write-Output \"Serial Number: $($cert.SerialNumber)\"",
+          "            Write-Output \"Store       : $store\"",
+          "            Write-Output \"----------------------------------------\"",
+          "        }",
+          "    } catch {",
+          "        Write-Output \"Error scanning store $store : $_\"",
+          "    }",
+          "}",
+          "",
+          "Write-Output \"Certificate scan completed.\""
+        ]
+      }
+    }
+  ]
+}
