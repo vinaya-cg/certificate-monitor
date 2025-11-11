@@ -6,6 +6,9 @@
 terraform/dashboard_api.zip
 terraform/excel_processor.zip
 terraform/certificate_monitor.zip
+**/tfplan
+**/tfplan.binary
+**/.terraform.tfstate.lock.info
 
 # Python
 __pycache__/
@@ -42,10 +45,33 @@ Thumbs.db
 # Logs
 *.log
 
+# Credentials and secrets
+servicenow-credentials.json
+servicenow-credentials-new.json
+*.pem
+*.key
+
 # Temporary files
 *.tmp
 *.bak
+response.json
+**/response.json
+**/servicenow-test-response.json
+**/servicenow-production-test.json
 
-# Excel test files (optional - remove if you want to include test data)
-# *.xlsx
-# *.xls
+# Test scripts
+test_*.py
+Test-*.ps1
+Quick-*.ps1
+Verify-*.ps1
+simulate_*.py
+trigger_*.py
+clear_*.py
+send_*.py
+verify_*.py
+
+# Credentials and secrets
+servicenow-credentials.json
+servicenow-credentials-new.json
+*.pem
+*.key
