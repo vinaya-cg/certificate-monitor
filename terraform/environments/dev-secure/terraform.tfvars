@@ -75,3 +75,15 @@ enable_servicenow_webhook = false
 servicenow_webhook_secret_name = "cert-management/servicenow/webhook-secret"
 # servicenow_webhook_secret_arn will be created when secret is set up
 
+# ===================================================================
+# SERVER CERTIFICATE SCANNER CONFIGURATION
+# ===================================================================
+
+# Enable server certificate scanning via SSM for Windows and Linux servers
+enable_server_certificate_scan = true
+
+# Run at 9:30 AM UTC daily (30 minutes after ACM sync, 25 minutes after ServiceNow tickets)
+server_scan_schedule = "cron(30 9 * * ? *)"
+
+# Disable CloudWatch alarms initially (enable after testing)
+server_scan_enable_alarms = false

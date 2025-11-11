@@ -155,3 +155,25 @@ variable "servicenow_webhook_secret_arn" {
   type        = string
   default     = ""  # Will be populated when secret is created
 }
+
+# ===================================================================
+# SERVER CERTIFICATE SCANNER CONFIGURATION
+# ===================================================================
+
+variable "enable_server_certificate_scan" {
+  description = "Enable server certificate scanning via SSM for Windows and Linux servers"
+  type        = bool
+  default     = false  # Disabled by default - enable when ready to scan servers
+}
+
+variable "server_scan_schedule" {
+  description = "Schedule expression for server certificate scanning (30 min after ACM sync)"
+  type        = string
+  default     = "cron(30 9 * * ? *)"  # Daily at 9:30 AM UTC
+}
+
+variable "server_scan_enable_alarms" {
+  description = "Enable CloudWatch alarms for server certificate scanner monitoring"
+  type        = bool
+  default     = false  # Disable initially, enable after testing
+}
