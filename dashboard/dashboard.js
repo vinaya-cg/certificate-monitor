@@ -1,8 +1,8 @@
 // Certificate Management Dashboard - JavaScript
 // API Configuration
 // This URL will be replaced during Terraform deployment
-const API_URL = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure/certificates';
-const API_BASE_URL = 'https://8clm33qmf9.execute-api.eu-west-1.amazonaws.com/dev-secure';
+const API_URL = 'PLACEHOLDER_API_URL';
+const API_BASE_URL = 'PLACEHOLDER_API_BASE_URL';
 
 // Configuration (these will be populated from environment variables)
 let API_CONFIG = {

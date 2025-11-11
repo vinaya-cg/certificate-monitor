@@ -92,8 +92,13 @@ resource "aws_s3_object" "postnl_logo" {
 locals {
   # Read and modify dashboard.js to inject API URL
   dashboard_js_template = file("${var.dashboard_source_path}/dashboard.js")
-  dashboard_js_content = replace(
+  dashboard_js_with_base_url = replace(
     local.dashboard_js_template,
+    "const API_BASE_URL = 'PLACEHOLDER_API_BASE_URL';",
+    "const API_BASE_URL = '${var.api_gateway_url}';"
+  )
+  dashboard_js_content = replace(
+    local.dashboard_js_with_base_url,
     "const API_URL = 'PLACEHOLDER_API_URL';",
     "const API_URL = '${var.api_gateway_url}/certificates';"
   )
